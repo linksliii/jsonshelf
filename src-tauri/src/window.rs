@@ -38,6 +38,21 @@ pub fn toggle_panel(window: &WebviewWindow) {
     }
 }
 
+/// 拦截主窗口的关闭请求(红色关闭按钮 / Cmd+W)→ 阻止关闭并改为隐藏。
+/// 应用保持后台运行,可由呼出快捷键或点击 Dock 图标重新唤起。
+/// Cmd+Q 走的是 ExitRequested(macOS 默认菜单的 Quit),不触发 CloseRequested,故仍能正常退出。
+pub fn setup_close_to_hide(app: &tauri::App) {
+    if let Some(win) = app.get_webview_window("main") {
+        let w = win.clone();
+        win.on_window_event(move |event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = w.hide();
+            }
+        });
+    }
+}
+
 pub fn setup_blur_hide(app: &tauri::App) {
     if let Some(win) = app.get_webview_window("main") {
         let w = win.clone();

@@ -40,6 +40,7 @@ pub fn run() {
       }
       shortcut::register(app)?;
       window::setup_blur_hide(app);
+      window::setup_close_to_hide(app);
 
       Ok(())
     })

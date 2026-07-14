@@ -33,6 +33,8 @@ export default function App() {
   const [content, setContent] = useState("");
   const [language, setLanguage] = useState("json");
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  // 当前选中条目 id 的 STATE(驱动列表高亮);currentIdRef 仍供自动保存同步读取。
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [keyword, setKeyword] = useState("");
   const [saveToHistory, setSaveToHistory] = useState(true);
   const [status, setStatus] = useState<{ kind: "ok" | "error" | "idle"; message: string }>({ kind: "idle", message: "" });
@@ -124,10 +126,13 @@ export default function App() {
     debounceRef.current = setTimeout(() => {
       savingRef.current = (savingRef.current ?? Promise.resolve()).then(async () => {
         try {
+          const wasNew = currentIdRef.current == null;
           const id = await upsertHistory({
             id: currentIdRef.current, title: autoTitle(content), content, language,
           });
           currentIdRef.current = id;   // 同步,下次运行即可见
+          // 新插入的条目让其在列表中显示为选中(currentIdRef 之前为 null)。
+          if (wasNew) setSelectedId(id);
           reload();
           setStatus({ kind: "ok", message: "已存入历史" });
           if (savedStatusRef.current) clearTimeout(savedStatusRef.current);
@@ -179,6 +184,7 @@ export default function App() {
   const handleNew = useCallback(() => {
     setContent("");
     currentIdRef.current = null;
+    setSelectedId(null);
     setStatus({ kind: "idle", message: "" });
   }, []);
 
@@ -199,7 +205,29 @@ export default function App() {
   const handleSelect = useCallback((e: HistoryEntry) => {
     setContent(e.content); setLanguage(e.language);
     currentIdRef.current = e.id;
+    setSelectedId(e.id);
   }, []);
+
+  // 右键菜单"复制内容":将该条目内容写入剪贴板(不影响当前编辑内容)。
+  const handleCopyContent = useCallback(async (e: HistoryEntry) => {
+    try {
+      await navigator.clipboard.writeText(e.content);
+      setStatus({ kind: "ok", message: "已复制" });
+    } catch (err) {
+      setStatus({ kind: "error", message: `复制失败: ${(err as Error).message ?? err}` });
+    }
+  }, []);
+
+  // 删除历史条目:先 window.confirm 二次确认(Tauri webview 可用),取消则不删除。
+  // 删除的若是当前选中/加载条目,清空选中态与 currentIdRef。
+  const handleDelete = useCallback(async (id: number) => {
+    const title = entries.find((x) => x.id === id)?.title ?? "这条历史记录";
+    if (!window.confirm(`确定删除「${title}」?`)) return;
+    await deleteHistory(id);
+    if (id === currentIdRef.current) currentIdRef.current = null;
+    setSelectedId((cur) => (cur === id ? null : cur));
+    reload();
+  }, [entries, reload]);
 
   const setterFor = { toggle: setHkToggle, format: setHkFormat, save: setHkSave };
 
@@ -263,10 +291,12 @@ export default function App() {
         />
         <HistoryPanel
           entries={entries}
+          selectedId={selectedId}
           onSelect={handleSelect}
           onRename={async (id, t) => { await renameHistory(id, t); reload(); }}
           onTogglePin={async (id, p) => { await togglePin(id, p); reload(); }}
-          onDelete={async (id) => { await deleteHistory(id); if (id === currentIdRef.current) currentIdRef.current = null; reload(); }}
+          onDelete={handleDelete}
+          onCopyContent={handleCopyContent}
           onSearch={handleSearch}
         />
       </div>

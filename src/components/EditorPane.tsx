@@ -7,7 +7,7 @@ import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { linter, lintGutter } from "@codemirror/lint";
 import { bracketMatching } from "@codemirror/language";
 import {
-  autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap,
+  autocompletion, closeBrackets, closeBracketsKeymap,
 } from "@codemirror/autocomplete";
 import { hotkeyFromEvent, hotkeysEqual, parseHotkey, type Hotkey } from "../lib/hotkeys";
 
@@ -89,7 +89,7 @@ export default function EditorPane({
         autocompletion(),
         handlerCompartment.current.of(buildHandlers(formatKey, saveKey)),
         keymap.of([
-          ...closeBracketsKeymap, ...completionKeymap,
+          ...closeBracketsKeymap,
           ...defaultKeymap, ...historyKeymap, ...searchKeymap,
         ]),
         EditorView.updateListener.of((u) => {
