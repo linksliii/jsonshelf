@@ -37,4 +37,32 @@ describe("HistoryPanel", () => {
     fireEvent.click(screen.getAllByLabelText("删除")[0]);
     expect(onDelete).toHaveBeenCalledWith(1);
   });
+
+  it("双击标题重命名,失焦提交 trimmed 标题", () => {
+    const onRename = vi.fn();
+    render(<HistoryPanel entries={entries} onSelect={() => {}} onRename={onRename} onTogglePin={() => {}} onDelete={() => {}} onSearch={() => {}} />);
+    fireEvent.doubleClick(screen.getByText("product"));
+    const input = screen.getByLabelText("重命名") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "  new title  " } });
+    fireEvent.blur(input);
+    expect(onRename).toHaveBeenCalledWith(2, "new title");
+  });
+
+  it("重命名为空白不提交", () => {
+    const onRename = vi.fn();
+    render(<HistoryPanel entries={entries} onSelect={() => {}} onRename={onRename} onTogglePin={() => {}} onDelete={() => {}} onSearch={() => {}} />);
+    fireEvent.doubleClick(screen.getByText("product"));
+    const input = screen.getByLabelText("重命名") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.blur(input);
+    expect(onRename).not.toHaveBeenCalled();
+  });
+
+  it("点击固定按钮切换 pinned 状态", () => {
+    const onTogglePin = vi.fn();
+    render(<HistoryPanel entries={entries} onSelect={() => {}} onRename={() => {}} onTogglePin={onTogglePin} onDelete={() => {}} onSearch={() => {}} />);
+    // entries[1] product 当前 pinned=false,点它的固定按钮应调用 (2, true)
+    fireEvent.click(screen.getAllByLabelText("固定")[1]);
+    expect(onTogglePin).toHaveBeenCalledWith(2, true);
+  });
 });

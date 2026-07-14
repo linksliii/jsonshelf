@@ -17,6 +17,7 @@ export default function HistoryItem({ entry, onSelect, onRename, onTogglePin, on
     <div className="history-item" onClick={() => onSelect(entry)}>
       {editing ? (
         <input
+          aria-label="重命名"
           value={draft}
           autoFocus
           onClick={(e) => e.stopPropagation()}
