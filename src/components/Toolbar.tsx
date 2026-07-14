@@ -16,7 +16,7 @@ interface Props {
   onOpenSettings: () => void;
 }
 
-const LANGUAGES = ["json", "yaml", "html", "css", "javascript"];
+const LANGUAGES = ["json", "yaml", "html", "css", "javascript", "plaintext"];
 
 function statsText(stats: JSONStats): string {
   const parts = [`${formatBytes(stats.bytes)}`, `${stats.lines} 行`];

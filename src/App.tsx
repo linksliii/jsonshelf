@@ -6,7 +6,7 @@ import Toolbar from "./components/Toolbar";
 import SettingsPanel from "./components/SettingsPanel";
 import { formatJSON, minifyJSON, formatOther } from "./lib/formatter";
 import { jsonStats, isValidJSON } from "./lib/jsonStats";
-import { autoTitle } from "./lib/title";
+import { autoTitle, safeFileName } from "./lib/title";
 import { fuzzyRank } from "./lib/fuzzy";
 import { hotkeysEqual, parseHotkey, toTauriAccelerator } from "./lib/hotkeys";
 import {
@@ -146,6 +146,11 @@ export default function App() {
   }, [content, language, saveToHistory, reload]);
 
   const handleFormat = useCallback(async () => {
+    // 纯文本无格式化器,直接给出提示避免走 prettier 报错。
+    if (language === "plaintext") {
+      setStatus({ kind: "idle", message: "纯文本无需格式化" });
+      return;
+    }
     try {
       const out = language === "json" ? formatJSON(content) : await formatOther(content, language);
       setContent(out);
@@ -162,12 +167,18 @@ export default function App() {
 
   const handleSave = useCallback(async () => {
     try {
-      const path = await exportJSON(content, `${autoTitle(content)}.json`);
+      // 文件名优先沿用当前选中历史条目的(可能被用户重命名过的)标题;
+      // 无选中条目时回退到按内容首键推断的 autoTitle。均经 safeFileName 清洗。
+      const entryTitle = selectedId != null
+        ? entries.find((x) => x.id === selectedId)?.title
+        : undefined;
+      const base = safeFileName(entryTitle ?? autoTitle(content));
+      const path = await exportJSON(content, `${base}.json`);
       setStatus(path ? { kind: "ok", message: `已保存: ${path}` } : { kind: "idle", message: "已取消" });
     } catch (e) {
       setStatus({ kind: "error", message: `保存失败: ${(e as Error).message}` });
     }
-  }, [content]);
+  }, [content, selectedId, entries]);
 
   // 复制当前内容到剪贴板。Tauri 2 webview 内 navigator.clipboard 可用,失败再提示。
   const handleCopy = useCallback(async () => {
@@ -288,6 +299,7 @@ export default function App() {
           onEscape={hideWindow}
           formatKey={hkFormat}
           saveKey={hkSave}
+          language={language}
         />
         <HistoryPanel
           entries={entries}
