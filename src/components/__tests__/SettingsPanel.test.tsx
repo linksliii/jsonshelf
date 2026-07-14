@@ -34,13 +34,22 @@ describe("SettingsPanel", () => {
     expect(onChangeHotkey).toHaveBeenCalledWith("toggle", "Cmd+K");
   });
 
-  it("录制时按 Esc 取消,不触发 onChangeHotkey", () => {
+  it("录制时按 Esc 取消录制,不触发 onChangeHotkey 也不关闭面板", () => {
     const onChangeHotkey = vi.fn();
-    render(<SettingsPanel open {...baseProps} onChangeHotkey={onChangeHotkey} />);
+    const onClose = vi.fn();
+    render(<SettingsPanel open {...baseProps} onChangeHotkey={onChangeHotkey} onClose={onClose} />);
     fireEvent.click(screen.getAllByText("录制")[0]);
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onChangeHotkey).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
     expect(screen.getAllByText("录制").length).toBeGreaterThan(0);
+  });
+
+  it("打开且未录制时按 Esc 关闭面板", () => {
+    const onClose = vi.fn();
+    render(<SettingsPanel open {...baseProps} onClose={onClose} />);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("切换失焦隐藏复选框触发 onChangeHideOnBlur", () => {

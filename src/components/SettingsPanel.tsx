@@ -32,26 +32,31 @@ export default function SettingsPanel(props: Props) {
   recordingRef.current = recording;
 
   useEffect(() => {
-    if (!open || !recording) return;
+    if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
       const which = recordingRef.current;
-      if (!which) return;
-      // 录制中拦截按键:阻止冒泡,避免 Esc 触发 App 的隐藏窗口逻辑。
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.key === "Escape") {
+      if (which) {
+        // 录制中拦截按键:阻止冒泡,避免 Esc 触发 App 的隐藏窗口逻辑。
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key === "Escape") { setRecording(null); return; }
+        const hk = hotkeyFromEvent(e);
+        if (!hk) return; // 纯修饰键,继续等待
+        onChangeHotkey(which, formatHotkey(hk));
         setRecording(null);
         return;
       }
-      const hk = hotkeyFromEvent(e);
-      if (!hk) return; // 纯修饰键,继续等待
-      onChangeHotkey(which, formatHotkey(hk));
-      setRecording(null);
+      // 打开但未录制:Esc 关闭面板(阻止冒泡,避免触发 App 隐藏窗口)。
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
     };
     // capture 阶段监听,确保先于 App 的 window keydown 处理 Esc。
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [open, recording, onChangeHotkey]);
+  }, [open, recording, onChangeHotkey, onClose]);
 
   // 面板关闭时清理录制状态。
   useEffect(() => {

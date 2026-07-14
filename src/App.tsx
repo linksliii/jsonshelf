@@ -7,7 +7,7 @@ import SettingsPanel from "./components/SettingsPanel";
 import { formatJSON, minifyJSON, formatOther } from "./lib/formatter";
 import { autoTitle } from "./lib/title";
 import { fuzzyRank } from "./lib/fuzzy";
-import { parseHotkey, toCodeMirror, toTauriAccelerator } from "./lib/hotkeys";
+import { hotkeysEqual, parseHotkey, toCodeMirror, toTauriAccelerator } from "./lib/hotkeys";
 import {
   listHistory, searchHistory, upsertHistory,
   renameHistory, togglePin, deleteHistory, exportJSON,
@@ -21,6 +21,17 @@ const DEFAULT_HK = { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S" }
 function cmKey(raw: string, fallback: string): string {
   const h = parseHotkey(raw);
   return h ? toCodeMirror(h) : fallback;
+}
+
+// 冲突检测:value 是否与 others 中任一已绑定键(可解析的)相同。
+// 导出以便单测;value 无法解析时视为无冲突(由调用方另行拒绝无效键)。
+export function hotkeyConflicts(value: string, others: string[]): boolean {
+  const parsed = parseHotkey(value);
+  if (!parsed) return false;
+  return others.some((o) => {
+    const h = parseHotkey(o);
+    return h != null && hotkeysEqual(parsed, h);
+  });
 }
 
 export default function App() {
@@ -158,14 +169,25 @@ export default function App() {
 
   const onChangeHotkey = useCallback(
     async (which: "toggle" | "format" | "save", value: string) => {
-      const prev = { toggle: hkToggle, format: hkFormat, save: hkSave }[which];
+      const all = { toggle: hkToggle, format: hkFormat, save: hkSave };
+      const prev = all[which];
+
+      // 校验:必须是合法快捷键,且不能与另外两个已绑定键冲突。
+      const parsed = parseHotkey(value);
+      if (!parsed) { setStatus({ kind: "error", message: "无效快捷键" }); return; }
+      const others = (["toggle", "format", "save"] as const)
+        .filter((w) => w !== which)
+        .map((w) => all[w]);
+      if (hotkeyConflicts(value, others)) {
+        setStatus({ kind: "error", message: "该快捷键与其他快捷键冲突" });
+        return;
+      }
+
       setterFor[which](value);
       try { await setSetting("hotkey." + which, value); } catch { /* 持久化失败不阻塞 */ }
       if (which === "toggle") {
-        const h = parseHotkey(value);
-        if (!h) { setterFor.toggle(prev); setStatus({ kind: "error", message: "无效快捷键" }); return; }
         try {
-          await rebindToggleShortcut(toTauriAccelerator(h));
+          await rebindToggleShortcut(toTauriAccelerator(parsed));
           setStatus({ kind: "ok", message: "呼出快捷键已更新" });
         } catch (e) {
           // 重绑失败:回退状态与存储,保留旧键。
