@@ -38,6 +38,7 @@ export default function App() {
   const [content, setContent] = useState("");
   const [language, setLanguage] = useState("json");
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [keyword, setKeyword] = useState("");
   const [saveToHistory, setSaveToHistory] = useState(true);
   const [status, setStatus] = useState<{ kind: "ok" | "error" | "idle"; message: string }>({ kind: "idle", message: "" });
   const [hkToggle, setHkToggle] = useState(DEFAULT_HK.toggle);
@@ -52,9 +53,18 @@ export default function App() {
   // App 的 Esc 隐藏窗口逻辑需在录制/设置打开时让位给 SettingsPanel。
   const settingsOpenRef = useRef(false);
   settingsOpenRef.current = settingsOpen;
+  // 搜索关键字用 ref 镜像,使 reload 无需进依赖数组即可读到最新值。
+  const keywordRef = useRef("");
+  keywordRef.current = keyword;
 
-  const refresh = useCallback(async () => {
-    try { setEntries(await listHistory()); } catch { /* DB 不可用不阻塞编辑 */ }
+  // 按当前关键字加载历史:有关键字则搜索并模糊排序,否则拉全量。
+  // rename/pin/delete/自动保存后调用它以重放当前筛选,避免过滤视图被全量列表覆盖。
+  const reload = useCallback(async () => {
+    const kw = keywordRef.current;
+    try {
+      const candidates = kw.trim() ? await searchHistory(kw) : await listHistory();
+      setEntries(kw.trim() ? fuzzyRank(candidates, kw).map((r) => r.entry) : candidates);
+    } catch { /* DB 不可用不阻塞编辑 */ }
   }, []);
 
   useEffect(() => {
@@ -117,7 +127,7 @@ export default function App() {
             id: currentIdRef.current, title: autoTitle(content), content, language,
           });
           currentIdRef.current = id;   // 同步,下次运行即可见
-          refresh();
+          reload();
           setStatus({ kind: "ok", message: "已存入历史" });
           if (savedStatusRef.current) clearTimeout(savedStatusRef.current);
           savedStatusRef.current = setTimeout(() => {
@@ -127,7 +137,7 @@ export default function App() {
       });
     }, 800);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [content, language, saveToHistory, refresh]);
+  }, [content, language, saveToHistory, reload]);
 
   const handleFormat = useCallback(async () => {
     try {
@@ -153,12 +163,12 @@ export default function App() {
     }
   }, [content]);
 
+  // 记录关键字(state 供渲染 + ref 供 reload 立即读到),再走统一的加载逻辑。
   const handleSearch = useCallback(async (kw: string) => {
-    try {
-      const candidates = kw.trim() ? await searchHistory(kw) : await listHistory();
-      setEntries(kw.trim() ? fuzzyRank(candidates, kw).map((r) => r.entry) : candidates);
-    } catch { /* ignore */ }
-  }, []);
+    setKeyword(kw);
+    keywordRef.current = kw;
+    await reload();
+  }, [reload]);
 
   const handleSelect = useCallback((e: HistoryEntry) => {
     setContent(e.content); setLanguage(e.language);
@@ -225,9 +235,9 @@ export default function App() {
         <HistoryPanel
           entries={entries}
           onSelect={handleSelect}
-          onRename={async (id, t) => { await renameHistory(id, t); refresh(); }}
-          onTogglePin={async (id, p) => { await togglePin(id, p); refresh(); }}
-          onDelete={async (id) => { await deleteHistory(id); if (id === currentIdRef.current) currentIdRef.current = null; refresh(); }}
+          onRename={async (id, t) => { await renameHistory(id, t); reload(); }}
+          onTogglePin={async (id, p) => { await togglePin(id, p); reload(); }}
+          onDelete={async (id) => { await deleteHistory(id); if (id === currentIdRef.current) currentIdRef.current = null; reload(); }}
           onSearch={handleSearch}
         />
       </div>
