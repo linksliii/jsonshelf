@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import EditorPane from "./components/EditorPane";
 import HistoryPanel from "./components/HistoryPanel";
 import Toolbar from "./components/Toolbar";
@@ -23,6 +24,14 @@ export default function App() {
 
   const refresh = useCallback(async () => {
     try { setEntries(await listHistory()); } catch { /* DB 不可用不阻塞编辑 */ }
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") getCurrentWindow().hide();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   useEffect(() => {

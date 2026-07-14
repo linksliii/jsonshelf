@@ -1,4 +1,6 @@
 mod commands;
+mod shortcut;
+mod window;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -27,6 +29,8 @@ pub fn run() {
             .build(),
         )?;
       }
+      shortcut::register(app)?;
+      window::setup_blur_hide(app);
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![commands::export::export_json])
