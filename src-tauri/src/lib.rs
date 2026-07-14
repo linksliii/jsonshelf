@@ -41,20 +41,6 @@ pub fn run() {
       shortcut::register(app)?;
       window::setup_blur_hide(app);
 
-      // macOS 原生毛玻璃效果(需窗口 transparent)
-      #[cfg(target_os = "macos")]
-      {
-        use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
-        if let Some(win) = app.get_webview_window("main") {
-          let _ = apply_vibrancy(
-            &win,
-            NSVisualEffectMaterial::HudWindow,
-            Some(NSVisualEffectState::Active),
-            Some(16.0),
-          );
-        }
-      }
-
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![

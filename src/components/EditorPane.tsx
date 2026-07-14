@@ -2,43 +2,68 @@ import { useEffect, useRef } from "react";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { searchKeymap } from "@codemirror/search";
+import { searchKeymap, searchPanelOpen } from "@codemirror/search";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { linter, lintGutter } from "@codemirror/lint";
+import { hotkeyFromEvent, hotkeysEqual, parseHotkey, type Hotkey } from "../lib/hotkeys";
 
 interface Props {
   value: string;
   onChange: (v: string) => void;
-  onFormat: () => void;   // 默认 Shift-Alt-f
-  onSave: () => void;     // 默认 Mod-s
-  formatKey?: string;     // CodeMirror keymap 字符串,如 "Shift-Alt-f"
-  saveKey?: string;       // CodeMirror keymap 字符串,如 "Mod-s"
+  onFormat: () => void;   // 默认 Shift+Alt+F
+  onSave: () => void;     // 默认 Cmd+S
+  onEscape?: () => void;  // Esc 时调用(如隐藏窗口),仅在编辑器未占用 Esc 时触发
+  formatKey?: string;     // 规范快捷键串,如 "Shift+Alt+F"
+  saveKey?: string;       // 规范快捷键串,如 "Cmd+S"
 }
 
 export interface EditorHandle { view: EditorView | null; }
 
 export default function EditorPane({
-  value, onChange, onFormat, onSave,
-  formatKey = "Shift-Alt-f", saveKey = "Mod-s",
+  value, onChange, onFormat, onSave, onEscape,
+  formatKey = "Shift+Alt+F", saveKey = "Cmd+S",
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  // keymap 放进 Compartment,快捷键变化时 reconfigure 而不重建整个编辑器。
-  const keymapCompartment = useRef(new Compartment());
+  // 事件处理放进 Compartment,快捷键变化时 reconfigure 而不重建整个编辑器。
+  const handlerCompartment = useRef(new Compartment());
 
-  // 用 ref 持有最新回调:编辑器只创建一次,但 keymap/updateListener
-  // 通过 ref 始终调用最新的 onFormat/onSave/onChange,避免陈旧闭包
-  // (否则 keymap 会捕获首次渲染的 onFormat,其闭包里的 content 永远是初始空串)。
-  const cbRef = useRef({ onChange, onFormat, onSave });
-  cbRef.current = { onChange, onFormat, onSave };
+  // 用 ref 持有最新回调:编辑器只创建一次,但事件处理通过 ref 始终调用最新的
+  // onFormat/onSave/onChange/onEscape,避免陈旧闭包(否则会捕获首次渲染的
+  // 空 content)。
+  const cbRef = useRef({ onChange, onFormat, onSave, onEscape });
+  cbRef.current = { onChange, onFormat, onSave, onEscape };
 
-  // 依据当前快捷键构建 keymap 扩展。key 用最新 props,回调经 cbRef 取最新。
-  const buildKeymap = (fmtKey: string, svKey: string): Extension =>
-    keymap.of([
-      { key: fmtKey, run: () => { cbRef.current.onFormat(); return true; } },
-      { key: svKey, run: () => { cbRef.current.onSave(); return true; } },
-      ...defaultKeymap, ...historyKeymap, ...searchKeymap,
-    ]);
+  // 依据当前快捷键构建 keydown 处理扩展。快捷键匹配用 e.code(物理键),
+  // 不受 macOS Option 合字影响(⌥⇧F 的 e.key 会变成 "Ï",但 e.code 仍是 "KeyF")。
+  const buildHandlers = (fmtRaw: string, svRaw: string): Extension => {
+    const fmt: Hotkey | null = parseHotkey(fmtRaw);
+    const sv: Hotkey | null = parseHotkey(svRaw);
+    return EditorView.domEventHandlers({
+      keydown: (e, view) => {
+        // Esc:编辑器未占用(无打开的搜索面板)时交给 onEscape(如隐藏窗口)。
+        // 搜索面板打开时不拦截,交由 searchKeymap 关闭面板。
+        if (e.key === "Escape") {
+          if (searchPanelOpen(view.state)) return false;
+          cbRef.current.onEscape?.();
+          return false; // 让事件继续传播,window 级监听可作为兜底
+        }
+        const pressed = hotkeyFromEvent(e);
+        if (!pressed) return false;
+        if (fmt && hotkeysEqual(pressed, fmt)) {
+          e.preventDefault();
+          cbRef.current.onFormat();
+          return true;
+        }
+        if (sv && hotkeysEqual(pressed, sv)) {
+          e.preventDefault();
+          cbRef.current.onSave();
+          return true;
+        }
+        return false;
+      },
+    });
+  };
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -51,7 +76,8 @@ export default function EditorPane({
         json(),
         linter(jsonParseLinter()),
         lintGutter(),
-        keymapCompartment.current.of(buildKeymap(formatKey, saveKey)),
+        handlerCompartment.current.of(buildHandlers(formatKey, saveKey)),
+        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) cbRef.current.onChange(u.state.doc.toString());
         }),
@@ -63,12 +89,12 @@ export default function EditorPane({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 快捷键变化时,通过 compartment reconfigure 更新 keymap(不重建视图)。
+  // 快捷键变化时,通过 compartment reconfigure 更新 keydown 处理(不重建视图)。
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
     view.dispatch({
-      effects: keymapCompartment.current.reconfigure(buildKeymap(formatKey, saveKey)),
+      effects: handlerCompartment.current.reconfigure(buildHandlers(formatKey, saveKey)),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formatKey, saveKey]);

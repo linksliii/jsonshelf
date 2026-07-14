@@ -2,7 +2,8 @@
 html, body, #root { height: 100%; }
 
 :root {
-  --radius: 16px;
+  --bg: #1e1e22;
+  --panel: #26262b;
   --surface: rgba(255, 255, 255, 0.05);
   --surface-hover: rgba(255, 255, 255, 0.09);
   --surface-active: rgba(255, 255, 255, 0.14);
@@ -15,8 +16,8 @@ html, body, #root { height: 100%; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, "Segoe UI", sans-serif;
-  /* 半透明,让原生毛玻璃透出 */
-  background: rgba(28, 28, 32, 0.6);
+  /* 普通不透明窗口:纯深色背景(不再依赖原生毛玻璃) */
+  background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   font-size: 13px;
@@ -26,7 +27,6 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -206,18 +206,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
+  /* 遮罩:压暗背后内容,与不透明面板形成清晰层次,避免双重半透明 */
+  background: rgba(0, 0, 0, 0.55);
   z-index: 100;
 }
 
 .settings-panel {
   width: 380px;
   max-width: 90vw;
-  background: var(--surface);
+  /* 不透明面板,与背后内容清晰分离 */
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px 18px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
 }
 
 .settings-header {

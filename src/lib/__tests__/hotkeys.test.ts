@@ -123,11 +123,18 @@ describe("hotkeyFromEvent", () => {
         shiftKey: false,
         metaKey: true,
         key: "j",
+        code: "KeyJ",
       })
     ).toEqual(hk({ alt: true, meta: true, key: "J" }));
   });
 
   it("returns null for a modifier-only press", () => {
+    const codes: Record<string, string> = {
+      Shift: "ShiftLeft",
+      Control: "ControlLeft",
+      Alt: "AltLeft",
+      Meta: "MetaLeft",
+    };
     for (const key of ["Shift", "Control", "Alt", "Meta"]) {
       expect(
         hotkeyFromEvent({
@@ -136,21 +143,41 @@ describe("hotkeyFromEvent", () => {
           shiftKey: true,
           metaKey: false,
           key,
+          code: codes[key],
         })
       ).toBeNull();
     }
   });
 
-  it("returns null for an empty key", () => {
+  it("returns null for an empty key with no usable code", () => {
     expect(
-      hotkeyFromEvent({ ctrlKey: false, altKey: false, shiftKey: false, metaKey: false, key: "" })
+      hotkeyFromEvent({ ctrlKey: false, altKey: false, shiftKey: false, metaKey: false, key: "", code: "" })
     ).toBeNull();
   });
 
   it("normalizes single letters to uppercase", () => {
     expect(
-      hotkeyFromEvent({ ctrlKey: true, altKey: false, shiftKey: false, metaKey: false, key: "s" })
+      hotkeyFromEvent({ ctrlKey: true, altKey: false, shiftKey: false, metaKey: false, key: "s", code: "KeyS" })
     ).toEqual(hk({ ctrl: true, key: "S" }));
+  });
+
+  it("derives the physical key from code despite macOS Option composition", () => {
+    // ⌥⇧F on macOS composes e.key into "Ï"; e.code stays "KeyF".
+    expect(
+      hotkeyFromEvent({ altKey: true, shiftKey: true, ctrlKey: false, metaKey: false, key: "Ï", code: "KeyF" })
+    ).toEqual(hk({ alt: true, shift: true, ctrl: false, meta: false, key: "F" }));
+  });
+
+  it("derives digits from code", () => {
+    expect(
+      hotkeyFromEvent({ ctrlKey: true, altKey: false, shiftKey: false, metaKey: false, key: "1", code: "Digit1" })
+    ).toEqual(hk({ ctrl: true, key: "1" }));
+  });
+
+  it("falls back to key when code is absent", () => {
+    expect(
+      hotkeyFromEvent({ ctrlKey: false, altKey: true, shiftKey: false, metaKey: true, key: "j" })
+    ).toEqual(hk({ alt: true, meta: true, key: "J" }));
   });
 });
 

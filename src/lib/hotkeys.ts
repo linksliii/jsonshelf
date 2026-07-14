@@ -89,8 +89,23 @@ export function toTauriAccelerator(h: Hotkey): string {
 }
 
 /**
- * Build a Hotkey from a keyboard-event-like object. Returns null if the pressed key
- * is itself only a modifier or empty. The key is normalized to uppercase.
+ * Derive a stable, layout-independent key from KeyboardEvent.code (the physical key).
+ * Unlike e.key, e.code is NOT affected by macOS Option composition (e.g. ⌥⇧F yields
+ * key "Ï" but code "KeyF"). Returns an uppercase letter/digit, or null for lone
+ * modifier codes / unmapped codes.
+ *   KeyA..KeyZ -> A..Z, Digit0..Digit9 -> 0..9, ShiftLeft/AltRight/... -> null.
+ */
+function keyFromCode(code: string): string | null {
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  return null;
+}
+
+/**
+ * Build a Hotkey from a keyboard-event-like object. Prefers `code` (physical key,
+ * immune to macOS Option composition) when it maps to a letter/digit; otherwise
+ * falls back to `key`. Returns null if the pressed key is itself only a modifier
+ * or empty. The key is normalized to uppercase.
  */
 export function hotkeyFromEvent(e: {
   ctrlKey: boolean;
@@ -98,15 +113,20 @@ export function hotkeyFromEvent(e: {
   shiftKey: boolean;
   metaKey: boolean;
   key: string;
+  code?: string;
 }): Hotkey | null {
-  if (!e.key) return null;
-  if (MODIFIER_EVENT_KEYS.has(e.key.toUpperCase())) return null;
+  let key: string | null = e.code ? keyFromCode(e.code) : null;
+  if (!key) {
+    if (!e.key) return null;
+    if (MODIFIER_EVENT_KEYS.has(e.key.toUpperCase())) return null;
+    key = e.key.toUpperCase();
+  }
   return {
     ctrl: e.ctrlKey,
     alt: e.altKey,
     shift: e.shiftKey,
     meta: e.metaKey,
-    key: e.key.toUpperCase(),
+    key,
   };
 }
 

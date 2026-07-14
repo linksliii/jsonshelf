@@ -10,7 +10,7 @@
     "beforeBuildCommand": "pnpm build"
   },
   "app": {
-    "macOSPrivateApi": true,
+    "macOSPrivateApi": false,
     "windows": [
       {
         "label": "main",
@@ -19,11 +19,11 @@
         "height": 560,
         "center": true,
         "resizable": true,
-        "decorations": false,
-        "transparent": true,
-        "alwaysOnTop": true,
+        "decorations": true,
+        "transparent": false,
+        "alwaysOnTop": false,
         "skipTaskbar": false,
-        "visible": false
+        "visible": true
       }
     ],
     "security": {

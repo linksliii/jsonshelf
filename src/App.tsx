@@ -7,7 +7,7 @@ import SettingsPanel from "./components/SettingsPanel";
 import { formatJSON, minifyJSON, formatOther } from "./lib/formatter";
 import { autoTitle } from "./lib/title";
 import { fuzzyRank } from "./lib/fuzzy";
-import { hotkeysEqual, parseHotkey, toCodeMirror, toTauriAccelerator } from "./lib/hotkeys";
+import { hotkeysEqual, parseHotkey, toTauriAccelerator } from "./lib/hotkeys";
 import {
   listHistory, searchHistory, upsertHistory,
   renameHistory, togglePin, deleteHistory, exportJSON,
@@ -16,12 +16,6 @@ import {
 import type { HistoryEntry } from "./types";
 
 const DEFAULT_HK = { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S" };
-
-// 解析规范快捷键串为 CodeMirror keymap 串;解析失败时退回默认。
-function cmKey(raw: string, fallback: string): string {
-  const h = parseHotkey(raw);
-  return h ? toCodeMirror(h) : fallback;
-}
 
 // 冲突检测:value 是否与 others 中任一已绑定键(可解析的)相同。
 // 导出以便单测;value 无法解析时视为无冲突(由调用方另行拒绝无效键)。
@@ -67,19 +61,21 @@ export default function App() {
     } catch { /* DB 不可用不阻塞编辑 */ }
   }, []);
 
+  // Esc → 隐藏窗口。设置面板打开时让位给 SettingsPanel(不隐藏);
+  // 仅在 Tauri 运行时内生效。EditorPane(编辑器聚焦时)与 window 级监听
+  // (编辑器未聚焦时)都调用它,以保证 Esc 在各焦点上下文下都可靠隐藏窗口。
+  const hideWindow = useCallback(() => {
+    if (settingsOpenRef.current) return;
+    if ("__TAURI_INTERNALS__" in window) getCurrentWindow().hide();
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // 设置面板打开时,Esc 交给 SettingsPanel(取消录制/关闭),不隐藏窗口。
-      // SettingsPanel 录制时用 capture 阶段 stopPropagation 已能拦截,
-      // 这里的 ref 判断是设置打开但未录制场景的双保险。
-      if (settingsOpenRef.current) return;
-      if (e.key === "Escape" && "__TAURI_INTERNALS__" in window) {
-        getCurrentWindow().hide();
-      }
+      if (e.key === "Escape") hideWindow();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [hideWindow]);
 
   // 从设置读取快捷键与失焦隐藏(带默认值),同步 Rust 状态。
   useEffect(() => {
@@ -229,8 +225,9 @@ export default function App() {
         <EditorPane
           value={content} onChange={setContent}
           onFormat={handleFormat} onSave={handleSave}
-          formatKey={cmKey(hkFormat, "Shift-Alt-f")}
-          saveKey={cmKey(hkSave, "Mod-s")}
+          onEscape={hideWindow}
+          formatKey={hkFormat}
+          saveKey={hkSave}
         />
         <HistoryPanel
           entries={entries}
