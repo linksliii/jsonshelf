@@ -9,6 +9,7 @@ import { fuzzyRank } from "./lib/fuzzy";
 import {
   listHistory, searchHistory, upsertHistory,
   renameHistory, togglePin, deleteHistory, exportJSON,
+  getSetting, setHideOnBlur,
 } from "./lib/ipc";
 import type { HistoryEntry } from "./types";
 
@@ -21,6 +22,7 @@ export default function App() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentIdRef = useRef<number | null>(null);
   const savingRef = useRef<Promise<void> | null>(null);
+  const savedStatusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(async () => {
     try { setEntries(await listHistory()); } catch { /* DB 不可用不阻塞编辑 */ }
@@ -36,6 +38,21 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // 从设置读取失焦自动隐藏(默认关闭),同步给 Rust
+  useEffect(() => {
+    (async () => {
+      try {
+        const v = (await getSetting("hideOnBlur")) ?? "false";
+        await setHideOnBlur(v === "true");
+      } catch { /* DB/IPC 不可用时保持 Rust 默认(关闭) */ }
+    })();
+  }, []);
+
+  // 清理保存反馈的复位定时器,避免卸载后 setState 泄漏
+  useEffect(() => () => {
+    if (savedStatusRef.current) clearTimeout(savedStatusRef.current);
+  }, []);
+
   useEffect(() => {
     if (!saveToHistory || !content.trim()) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -47,6 +64,11 @@ export default function App() {
           });
           currentIdRef.current = id;   // 同步,下次运行即可见
           refresh();
+          setStatus({ kind: "ok", message: "已存入历史" });
+          if (savedStatusRef.current) clearTimeout(savedStatusRef.current);
+          savedStatusRef.current = setTimeout(() => {
+            setStatus({ kind: "idle", message: "" });
+          }, 2000);
         } catch { /* 写失败不打断 */ }
       });
     }, 800);

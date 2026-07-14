@@ -97,3 +97,24 @@ export async function deleteHistory(id: number): Promise<void> {
 export async function exportJSON(content: string, defaultName: string): Promise<string | null> {
   return invoke<string | null>("export_json", { content, defaultName });
 }
+
+export async function getSetting(key: string): Promise<string | null> {
+  const d = await db();
+  const rows = await d.select<{ value: string }[]>(
+    "SELECT value FROM settings WHERE key = ?",
+    [key]
+  );
+  return rows.length ? rows[0].value : null;
+}
+
+export async function setSetting(key: string, value: string): Promise<void> {
+  const d = await db();
+  await d.execute(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    [key, value]
+  );
+}
+
+export async function setHideOnBlur(enabled: boolean): Promise<void> {
+  await invoke("set_hide_on_blur_cmd", { enabled });
+}

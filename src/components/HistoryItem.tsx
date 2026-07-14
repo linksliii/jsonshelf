@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { HistoryEntry } from "../types";
+import { relativeTime } from "../lib/relativeTime";
 
 interface Props {
   entry: HistoryEntry;
@@ -27,8 +28,11 @@ export default function HistoryItem({ entry, onSelect, onRename, onTogglePin, on
         />
       ) : (
         <span className="title" onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}>
-          {entry.pinned ? <span className="pin-indicator" aria-hidden="true">📌 </span> : null}
-          <span className="title-text">{entry.title}</span>
+          <span className="title-row">
+            {entry.pinned ? <span className="pin-indicator" aria-hidden="true">📌 </span> : null}
+            <span className="title-text">{entry.title}</span>
+          </span>
+          <span className="history-time">{relativeTime(entry.updatedAt, Date.now())}</span>
         </span>
       )}
       <button aria-label="固定" onClick={(e) => { e.stopPropagation(); onTogglePin(entry.id, !entry.pinned); }}>

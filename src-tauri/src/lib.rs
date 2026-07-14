@@ -2,16 +2,25 @@ mod commands;
 mod shortcut;
 mod window;
 
+use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  let migrations = vec![Migration {
-    version: 1,
-    description: "create history table",
-    sql: include_str!("../migrations/0001_init.sql"),
-    kind: MigrationKind::Up,
-  }];
+  let migrations = vec![
+    Migration {
+      version: 1,
+      description: "create history table",
+      sql: include_str!("../migrations/0001_init.sql"),
+      kind: MigrationKind::Up,
+    },
+    Migration {
+      version: 2,
+      description: "create settings table",
+      sql: include_str!("../migrations/0002_settings.sql"),
+      kind: MigrationKind::Up,
+    },
+  ];
 
   tauri::Builder::default()
     .plugin(
@@ -31,9 +40,37 @@ pub fn run() {
       }
       shortcut::register(app)?;
       window::setup_blur_hide(app);
+
+      // macOS 原生毛玻璃效果(需窗口 transparent)
+      #[cfg(target_os = "macos")]
+      {
+        use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
+        if let Some(win) = app.get_webview_window("main") {
+          let _ = apply_vibrancy(
+            &win,
+            NSVisualEffectMaterial::HudWindow,
+            Some(NSVisualEffectState::Active),
+            Some(16.0),
+          );
+        }
+      }
+
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![commands::export::export_json])
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .invoke_handler(tauri::generate_handler![
+      commands::export::export_json,
+      window::set_hide_on_blur_cmd
+    ])
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|app_handle, event| {
+      // macOS: 点击 Dock 图标时(应用无可见窗口)重新显示主窗口
+      if let tauri::RunEvent::Reopen { .. } = event {
+        if let Some(win) = app_handle.get_webview_window("main") {
+          let _ = win.center();
+          let _ = win.show();
+          let _ = win.set_focus();
+        }
+      }
+    });
 }
