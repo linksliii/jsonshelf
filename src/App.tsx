@@ -10,6 +10,9 @@ import { autoTitle, safeFileName } from "./lib/title";
 import { fuzzyRank } from "./lib/fuzzy";
 import { hotkeysEqual, parseHotkey, toTauriAccelerator } from "./lib/hotkeys";
 import {
+  PANEL_DEFAULT, PANEL_COLLAPSE_THRESHOLD, clampWidth,
+} from "./lib/panelWidth";
+import {
   listHistory, searchHistory, upsertHistory,
   renameHistory, togglePin, deleteHistory, exportJSON,
   getSetting, setSetting, setHideOnBlur, rebindToggleShortcut,
@@ -43,13 +46,23 @@ export default function App() {
   const [hkSave, setHkSave] = useState(DEFAULT_HK.save);
   const [hideOnBlur, setHideOnBlurState] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // 历史面板:可折叠(Cmd+B / 拖到最窄)+ 可拖拽调宽,两者均持久化到 settings。
+  const [panelHidden, setPanelHidden] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(PANEL_DEFAULT);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 拖拽调宽状态:startX 记录按下时鼠标 x,startWidth 记录按下时面板宽度。
+  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const currentIdRef = useRef<number | null>(null);
   // 始终保存当前选中条目的最新标题(含被 rename 后的);导出文件名以此为准,
   // 不受搜索过滤后 entries 中查不到该条目的影响。
   const selectedTitleRef = useRef<string | null>(null);
   const savingRef = useRef<Promise<void> | null>(null);
   const savedStatusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // "刚加载"守卫:加载历史条目 / 新建会以编程方式修改 content(可能连带 language),
+  // 这类变更不应触发自动保存(否则仅"查看"一条就会更新 updated_at 把它顶到列表顶部)。
+  // handleSelect/handleNew 置 true;自动保存 effect 在开头消费一次(置 false 并 return),
+  // 恰好跳过加载引起的那一次 effect 运行,而后续真实编辑(flag 已为 false)照常保存并重排。
+  const justLoadedRef = useRef(false);
   // App 的 Esc 隐藏窗口逻辑需在录制/设置打开时让位给 SettingsPanel。
   const settingsOpenRef = useRef(false);
   settingsOpenRef.current = settingsOpen;
@@ -77,6 +90,13 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Cmd+B 切换历史面板显隐。放在 window 级(App)处理,不论焦点在编辑器还是别处都生效;
+      // Cmd+B 非 JSON 编辑器绑定,不与其冲突。独立于下方 Esc 逻辑,先处理并返回。
+      if (e.metaKey && (e.key === "b" || e.key === "B")) {
+        e.preventDefault();
+        setPanelHidden((h) => !h);
+        return;
+      }
       // 已被处理的 Esc 不再隐藏窗口:CodeMirror 关闭查找面板(preventDefault)、
       // 或 EditorPane 已主动隐藏窗口(preventDefault)后事件都带 defaultPrevented,
       // 这里跳过可避免"关查找面板连带隐藏窗口"以及正常隐藏时的重复调用。
@@ -91,11 +111,13 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const [toggle, format, save, blur] = await Promise.all([
+        const [toggle, format, save, blur, pWidth, pHidden] = await Promise.all([
           getSetting("hotkey.toggle"),
           getSetting("hotkey.format"),
           getSetting("hotkey.save"),
           getSetting("hideOnBlur"),
+          getSetting("panelWidth"),
+          getSetting("panelHidden"),
         ]);
         const tg = toggle ?? DEFAULT_HK.toggle;
         setHkToggle(tg);
@@ -105,6 +127,11 @@ export default function App() {
         const hb = (blur ?? "false") === "true";
         setHideOnBlurState(hb);
         await setHideOnBlur(hb);
+
+        // 面板宽度:解析为整数并夹紧到合法区间;非法/缺省回退默认。面板显隐:字符串布尔。
+        const w = parseInt(pWidth ?? "", 10);
+        setPanelWidth(Number.isFinite(w) ? clampWidth(w) : PANEL_DEFAULT);
+        setPanelHidden((pHidden ?? "false") === "true");
 
         // Rust 已在默认键(Alt+Cmd+J)注册呼出键;若存储值不同则重绑。
         if (tg !== DEFAULT_HK.toggle) {
@@ -123,7 +150,64 @@ export default function App() {
     if (savedStatusRef.current) clearTimeout(savedStatusRef.current);
   }, []);
 
+  // 持久化面板显隐(Cmd+B / 拖到最窄触发的收起都会经此)。首挂载从 DB 读回时也会写一次,
+  // 值相同幂等无副作用。setSetting 包 try/catch,DB 出错不阻塞 UI。
   useEffect(() => {
+    (async () => {
+      try { await setSetting("panelHidden", String(panelHidden)); } catch { /* ignore */ }
+    })();
+  }, [panelHidden]);
+
+  // 分隔条拖拽调宽:按下记录起点,监听 window mousemove 实时更新宽度(面板在右侧,
+  // 左拖变宽 → 用 startX - 当前 x 作为增量),mouseup 时移除监听并把最终宽度持久化。
+  // 拖到窄于折叠阈值则直接收起面板并结束。拖拽期间禁用 body 文本选中,结束恢复。
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startWidth: panelWidth };
+    const prevUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    // 记录拖拽过程中的最新宽度,mouseup 时据此持久化(避免读到 state 的旧闭包值)。
+    let latest = panelWidth;
+    let collapsed = false;
+
+    const cleanup = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = prevUserSelect;
+      dragRef.current = null;
+    };
+    const onMove = (ev: MouseEvent) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const raw = drag.startWidth + (drag.startX - ev.clientX);
+      if (raw < PANEL_COLLAPSE_THRESHOLD) {
+        // 拖到最窄:收起面板(其持久化由 panelHidden 的 effect 负责)并结束拖拽。
+        collapsed = true;
+        setPanelHidden(true);
+        cleanup();
+        return;
+      }
+      latest = clampWidth(raw);
+      setPanelWidth(latest);
+    };
+    const onUp = () => {
+      cleanup();
+      // 仅在正常松手(非收起)时持久化宽度;拖拽过程中不写库以免频繁 IO。
+      if (!collapsed) {
+        (async () => {
+          try { await setSetting("panelWidth", String(latest)); } catch { /* ignore */ }
+        })();
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [panelWidth]);
+
+  useEffect(() => {
+    // 加载/新建引起的 content(及 language)变更:消费守卫并跳过本次保存。
+    // handleSelect 中 setContent+setLanguage 在同一渲染批次内,effect 只运行一次即被跳过;
+    // 用户随后真实输入时 flag 已为 false,正常保存并重排(编辑顶到顶部是期望行为)。
+    if (justLoadedRef.current) { justLoadedRef.current = false; return; }
     if (!saveToHistory || !content.trim()) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -195,6 +279,8 @@ export default function App() {
   // 新建/清空:不改动任何已加载的历史条目(currentIdRef 置空),
   // 下次自动保存(若开启且内容非空)会新插入一条,而非覆盖旧条目。
   const handleNew = useCallback(() => {
+    // 与 handleSelect 一致:清空为编程式变更,不触发自动保存(空内容本就会被 effect 提前返回)。
+    justLoadedRef.current = true;
     setContent("");
     currentIdRef.current = null;
     setSelectedId(null);
@@ -217,6 +303,8 @@ export default function App() {
   }, [reload]);
 
   const handleSelect = useCallback((e: HistoryEntry) => {
+    // 标记本次 content/language 变更为"编程式加载",供自动保存 effect 跳过一次。
+    justLoadedRef.current = true;
     setContent(e.content); setLanguage(e.language);
     currentIdRef.current = e.id;
     setSelectedId(e.id);
@@ -305,21 +393,35 @@ export default function App() {
           saveKey={hkSave}
           language={language}
         />
-        <HistoryPanel
-          entries={entries}
-          selectedId={selectedId}
-          onSelect={handleSelect}
-          onRename={async (id, t) => {
-            await renameHistory(id, t);
-            // 重命名的若是当前选中条目,同步导出用标题(即使被搜索过滤掉也不丢失)。
-            if (id === currentIdRef.current) selectedTitleRef.current = t;
-            reload();
-          }}
-          onTogglePin={async (id, p) => { await togglePin(id, p); reload(); }}
-          onDelete={handleDelete}
-          onCopyContent={handleCopyContent}
-          onSearch={handleSearch}
-        />
+        {!panelHidden && (
+          <>
+            {/* 拖拽分隔条:调节右侧历史面板宽度;拖到最窄自动收起。 */}
+            <div
+              className="panel-divider"
+              onMouseDown={handleDividerMouseDown}
+              role="separator"
+              aria-label="调整历史面板宽度"
+            />
+            {/* 内联宽度覆盖 CSS 默认,收起时整块不渲染,编辑器占满全宽。 */}
+            <div className="history-panel-wrap" style={{ width: panelWidth }}>
+              <HistoryPanel
+                entries={entries}
+                selectedId={selectedId}
+                onSelect={handleSelect}
+                onRename={async (id, t) => {
+                  await renameHistory(id, t);
+                  // 重命名的若是当前选中条目,同步导出用标题(即使被搜索过滤掉也不丢失)。
+                  if (id === currentIdRef.current) selectedTitleRef.current = t;
+                  reload();
+                }}
+                onTogglePin={async (id, p) => { await togglePin(id, p); reload(); }}
+                onDelete={handleDelete}
+                onCopyContent={handleCopyContent}
+                onSearch={handleSearch}
+              />
+            </div>
+          </>
+        )}
       </div>
       <SettingsPanel
         open={settingsOpen}

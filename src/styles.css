@@ -93,9 +93,26 @@ body {
   overflow: auto;
 }
 
+/* 拖拽分隔条:编辑器与历史面板之间的细竖条,可左右拖拽调节面板宽度。 */
+.panel-divider {
+  flex: none;
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.12s ease;
+}
+.panel-divider:hover,
+.panel-divider:active { background: var(--surface-hover); }
+
 /* History panel */
+/* 宽度由外层 .history-panel-wrap 的内联样式驱动(可拖拽/持久化);面板自身填满外层。 */
+.history-panel-wrap {
+  flex: none;
+  min-width: 0;
+  display: flex;
+}
 .history-panel {
-  width: 264px;
+  width: 100%;
   border-left: 1px solid var(--divider);
   display: flex;
   flex-direction: column;
