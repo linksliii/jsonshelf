@@ -3,7 +3,12 @@ import type { HistoryEntry } from "../types";
 
 let dbPromise: Promise<Database> | null = null;
 function db(): Promise<Database> {
-  if (!dbPromise) dbPromise = Database.load("sqlite:jsonshelf.db");
+  if (!dbPromise) {
+    dbPromise = Database.load("sqlite:jsonshelf.db").catch((e) => {
+      dbPromise = null; // 失败时清空,下次调用重试,避免毒化单例
+      throw e;
+    });
+  }
   return dbPromise;
 }
 
