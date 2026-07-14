@@ -8,9 +8,30 @@ importers:
 
   .:
     dependencies:
+      '@codemirror/commands':
+        specifier: ^6.10.4
+        version: 6.10.4
+      '@codemirror/lang-json':
+        specifier: ^6.0.2
+        version: 6.0.2
+      '@codemirror/lint':
+        specifier: ^6.9.7
+        version: 6.9.7
+      '@codemirror/search':
+        specifier: ^6.7.1
+        version: 6.7.1
+      '@codemirror/state':
+        specifier: ^6.7.1
+        version: 6.7.1
+      '@codemirror/view':
+        specifier: ^6.43.6
+        version: 6.43.6
       '@leeoniya/ufuzzy':
         specifier: ^1.0.19
         version: 1.0.19
+      codemirror:
+        specifier: ^6.0.2
+        version: 6.0.2
       prettier:
         specifier: ^3.9.5
         version: 3.9.5
@@ -88,6 +109,30 @@ packages:
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@bramus/specificity/-/specificity-2.4.2.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40bramus%2Fspecificity%2F-%2Fspecificity-2.4.2.tgz}
     hasBin: true
 
+  '@codemirror/autocomplete@6.20.3':
+    resolution: {integrity: sha512-tlosUqb+3BbxCxZdu4tKeRghPFC+QM7q4X5YhKV2eCmPG+1r2F3f4AaSz5sCrFqUtX4Jh20VFTKecl16MgiV9g==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@codemirror/autocomplete/-/autocomplete-6.20.3.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40codemirror%2Fautocomplete%2F-%2Fautocomplete-6.20.3.tgz}
+
+  '@codemirror/commands@6.10.4':
+    resolution: {integrity: sha512-Ryk9y9T0FFVF0cUGhAknveAyUOl/A1qReTFi+qPKtOh2Z9F4AUBz3XOrYD4ZEgZirdugVzHvd/2/Wcwy5OliTg==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@codemirror/commands/-/commands-6.10.4.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40codemirror%2Fcommands%2F-%2Fcommands-6.10.4.tgz}
+
+  '@codemirror/lang-json@6.0.2':
+    resolution: {integrity: sha512-x2OtO+AvwEHrEwR0FyyPtfDUiloG3rnVTSZV1W8UteaLL8/MajQd8DpvUb2YVzC+/T18aSDv0H9mu+xw0EStoQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@codemirror/lang-json/-/lang-json-6.0.2.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40codemirror%2Flang-json%2F-%2Flang-json-6.0.2.tgz}
+
+  '@codemirror/language@6.12.4':
+    resolution: {integrity: sha512-1q4PaT+o6PbgpkJt4Q8Fv5XJxTy4FUZ4MWETtyiDw3J0Pyr9E2vqcKL+k9wcvjNTIsauxvE7OfmWj3FRPHQ76A==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@codemirror/language/-/language-6.12.4.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40codemirror%2Flanguage%2F-%2Flanguage-6.12.4.tgz}
+
+  '@codemirror/lint@6.9.7':
+    resolution: {integrity: sha512-28/+iWLYxKxsvGYhSYL7zaCZqLz5+FFFDq9tVsvGv9kv8RY4fFAchJ5WX9M3YrrRlTIsECjsXPqeNgnSmNP2dg==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@codemirror/lint/-/lint-6.9.7.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40codemirror%2Flint%2F-%2Flint-6.9.7.tgz}
+
+  '@codemirror/search@6.7.1':
+    resolution: {integrity: sha512-uMe5UO6PamJtSHrXhhHOzSX3ReWtiJrva6GnPMwSOrZtiExb5X5eExhr2OUZQVvdxPsKpY3Ro2mFbQadpPWmHA==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@codemirror/search/-/search-6.7.1.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40codemirror%2Fsearch%2F-%2Fsearch-6.7.1.tgz}
+
+  '@codemirror/state@6.7.1':
+    resolution: {integrity: sha512-9QzNDgE4EYDnAHfrTlR2lwiPciiOymLtwKK+8yHQzCc7GXhAP9xdEbEJFy2IWB1j9UGUl9BsgMmTo/ImA02T7A==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@codemirror/state/-/state-6.7.1.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40codemirror%2Fstate%2F-%2Fstate-6.7.1.tgz}
+
+  '@codemirror/view@6.43.6':
+    resolution: {integrity: sha512-EVunGSYN1wz1p75WY1s3Xg7t3i8Yol0kGZGizNdX9BUFgMFILYVe8/u6EVpo7Ff5PwbZuILb4QAq7IZoKzIEQA==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@codemirror/view/-/view-6.43.6.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40codemirror%2Fview%2F-%2Fview-6.43.6.tgz}
+
   '@csstools/color-helpers@6.1.0':
     resolution: {integrity: sha512-064IFJdjTfUqnjpCVpMOdbr8FLQBhinbZj6yRv2An2E41O/pLEXqfFRWqGq/SxlE5PEUYTlvWsG2r8MswAVvkg==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@csstools/color-helpers/-/color-helpers-6.1.0.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40csstools%2Fcolor-helpers%2F-%2Fcolor-helpers-6.1.0.tgz}
     engines: {node: '>=20.19.0'}
@@ -147,6 +192,21 @@ packages:
 
   '@leeoniya/ufuzzy@1.0.19':
     resolution: {integrity: sha512-0pikDeYt0IHEUPza5RTCDXc/17S1pTrYnReEMp8Aa6k1ovzw5QdZLwicW8TjljwEZRb6oYag0xmALohrcq/yOQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@leeoniya/ufuzzy/-/ufuzzy-1.0.19.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40leeoniya%2Fufuzzy%2F-%2Fufuzzy-1.0.19.tgz}
+
+  '@lezer/common@1.5.2':
+    resolution: {integrity: sha512-sxQE460fPZyU3sdc8lafxiPwJHBzZRy/udNFynGQky1SePYBdhkBl1kOagA9uT3pxR8K09bOrmTUqA9wb/PjSQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@lezer/common/-/common-1.5.2.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40lezer%2Fcommon%2F-%2Fcommon-1.5.2.tgz}
+
+  '@lezer/highlight@1.2.3':
+    resolution: {integrity: sha512-qXdH7UqTvGfdVBINrgKhDsVTJTxactNNxLk7+UMwZhU13lMHaOBlJe9Vqp907ya56Y3+ed2tlqzys7jDkTmW0g==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@lezer/highlight/-/highlight-1.2.3.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40lezer%2Fhighlight%2F-%2Fhighlight-1.2.3.tgz}
+
+  '@lezer/json@1.0.3':
+    resolution: {integrity: sha512-BP9KzdF9Y35PDpv04r0VeSTKDeox5vVr3efE7eBbx3r4s3oNLfunchejZhjArmeieBH+nVOpgIiBJpEAv8ilqQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@lezer/json/-/json-1.0.3.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40lezer%2Fjson%2F-%2Fjson-1.0.3.tgz}
+
+  '@lezer/lr@1.4.10':
+    resolution: {integrity: sha512-rnCpTIBafOx4mRp43xOxDJbFipJm/c0cia/V5TiGlhmMa+wsSdoGmUN3w5Bqrks/09Q/D4tNAmWaT8p6NRi77A==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@lezer/lr/-/lr-1.4.10.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40lezer%2Flr%2F-%2Flr-1.4.10.tgz}
+
+  '@marijn/find-cluster-break@1.0.3':
+    resolution: {integrity: sha512-FY+MKLBoTsLNJF/eLWaOsXGdz6uh3Iu1axjPf6TUq92IYumcTcXWHoS747JARLkcdlJ/Waiaxc5wQfFO8jC6NA==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@marijn/find-cluster-break/-/find-cluster-break-1.0.3.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40marijn%2Ffind-cluster-break%2F-%2Ffind-cluster-break-1.0.3.tgz}
 
   '@napi-rs/wasm-runtime@1.1.6':
     resolution: {integrity: sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@napi-rs/wasm-runtime/-/wasm-runtime-1.1.6.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40napi-rs%2Fwasm-runtime%2F-%2Fwasm-runtime-1.1.6.tgz}
@@ -498,8 +558,14 @@ packages:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/chai/-/chai-6.2.2.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fchai%2F-%2Fchai-6.2.2.tgz}
     engines: {node: '>=18'}
 
+  codemirror@6.0.2:
+    resolution: {integrity: sha512-VhydHotNW5w1UGK0Qj96BwSk/Zqbp9WbnyK2W/eVMv4QyF41INRGpjUhFJY7/uDNuudSc33a/PKr4iDqRduvHw==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/codemirror/-/codemirror-6.0.2.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fcodemirror%2F-%2Fcodemirror-6.0.2.tgz}
+
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/convert-source-map/-/convert-source-map-2.0.0.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fconvert-source-map%2F-%2Fconvert-source-map-2.0.0.tgz}
+
+  crelt@1.0.7:
+    resolution: {integrity: sha512-aK6BbWfhf4U/wCcLHKPJl/xa6VkVstRaPywWtMKGwuOLc/wZTyQYuoxgvZnNsBvv7Kg3YTBQYYBCggcviQczuA==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/crelt/-/crelt-1.0.7.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fcrelt%2F-%2Fcrelt-1.0.7.tgz}
 
   css-tree@3.2.1:
     resolution: {integrity: sha512-X7sjQzceUhu1u7Y/ylrRZFU2FS6LRiFVp6rKLPg23y3x3c3DOKAwuXGDp+PAGjh6CSnCjYeAul8pcT8bAl+lSA==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/css-tree/-/css-tree-3.2.1.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fcss-tree%2F-%2Fcss-tree-3.2.1.tgz}
@@ -763,6 +829,9 @@ packages:
     resolution: {integrity: sha512-laJTa3Jb+VQpaC6DseHhF7dXVqHTfJPCRDaEbid/drOhgitgYku/letMUqOXFoWV0zIIUbjpdH2t+tYj4bQMRQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/strip-indent/-/strip-indent-3.0.0.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fstrip-indent%2F-%2Fstrip-indent-3.0.0.tgz}
     engines: {node: '>=8'}
 
+  style-mod@4.1.3:
+    resolution: {integrity: sha512-i/n8VsZydrugj3Iuzll8+x/00GH2vnYsk1eomD8QiRrSAeW6ItbCQDtfXCeJHd0iwiNagqjQkvpvREEPtW3IoQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/style-mod/-/style-mod-4.1.3.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fstyle-mod%2F-%2Fstyle-mod-4.1.3.tgz}
+
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/symbol-tree/-/symbol-tree-3.2.4.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fsymbol-tree%2F-%2Fsymbol-tree-3.2.4.tgz}
 
@@ -892,6 +961,9 @@ packages:
       jsdom:
         optional: true
 
+  w3c-keyname@2.2.8:
+    resolution: {integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/w3c-keyname/-/w3c-keyname-2.2.8.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fw3c-keyname%2F-%2Fw3c-keyname-2.2.8.tgz}
+
   w3c-xmlserializer@5.0.0:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/w3c-xmlserializer/-/w3c-xmlserializer-5.0.0.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2Fw3c-xmlserializer%2F-%2Fw3c-xmlserializer-5.0.0.tgz}
     engines: {node: '>=18'}
@@ -958,6 +1030,57 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
+  '@codemirror/autocomplete@6.20.3':
+    dependencies:
+      '@codemirror/language': 6.12.4
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.6
+      '@lezer/common': 1.5.2
+
+  '@codemirror/commands@6.10.4':
+    dependencies:
+      '@codemirror/language': 6.12.4
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.6
+      '@lezer/common': 1.5.2
+
+  '@codemirror/lang-json@6.0.2':
+    dependencies:
+      '@codemirror/language': 6.12.4
+      '@lezer/json': 1.0.3
+
+  '@codemirror/language@6.12.4':
+    dependencies:
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.6
+      '@lezer/common': 1.5.2
+      '@lezer/highlight': 1.2.3
+      '@lezer/lr': 1.4.10
+      style-mod: 4.1.3
+
+  '@codemirror/lint@6.9.7':
+    dependencies:
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.6
+      crelt: 1.0.7
+
+  '@codemirror/search@6.7.1':
+    dependencies:
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.6
+      crelt: 1.0.7
+
+  '@codemirror/state@6.7.1':
+    dependencies:
+      '@marijn/find-cluster-break': 1.0.3
+
+  '@codemirror/view@6.43.6':
+    dependencies:
+      '@codemirror/state': 6.7.1
+      crelt: 1.0.7
+      style-mod: 4.1.3
+      w3c-keyname: 2.2.8
+
   '@csstools/color-helpers@6.1.0': {}
 
   '@csstools/css-calc@3.2.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
@@ -1003,6 +1126,24 @@ snapshots:
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
   '@leeoniya/ufuzzy@1.0.19': {}
+
+  '@lezer/common@1.5.2': {}
+
+  '@lezer/highlight@1.2.3':
+    dependencies:
+      '@lezer/common': 1.5.2
+
+  '@lezer/json@1.0.3':
+    dependencies:
+      '@lezer/common': 1.5.2
+      '@lezer/highlight': 1.2.3
+      '@lezer/lr': 1.4.10
+
+  '@lezer/lr@1.4.10':
+    dependencies:
+      '@lezer/common': 1.5.2
+
+  '@marijn/find-cluster-break@1.0.3': {}
 
   '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
@@ -1248,7 +1389,19 @@ snapshots:
 
   chai@6.2.2: {}
 
+  codemirror@6.0.2:
+    dependencies:
+      '@codemirror/autocomplete': 6.20.3
+      '@codemirror/commands': 6.10.4
+      '@codemirror/language': 6.12.4
+      '@codemirror/lint': 6.9.7
+      '@codemirror/search': 6.7.1
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.6
+
   convert-source-map@2.0.0: {}
+
+  crelt@1.0.7: {}
 
   css-tree@3.2.1:
     dependencies:
@@ -1477,6 +1630,8 @@ snapshots:
     dependencies:
       min-indent: 1.0.1
 
+  style-mod@4.1.3: {}
+
   symbol-tree@3.2.4: {}
 
   tinybench@2.9.0: {}
@@ -1568,6 +1723,8 @@ snapshots:
       jsdom: 29.1.1
     transitivePeerDependencies:
       - msw
+
+  w3c-keyname@2.2.8: {}
 
   w3c-xmlserializer@5.0.0:
     dependencies:
