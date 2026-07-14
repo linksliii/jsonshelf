@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@leeoniya/ufuzzy':
+        specifier: ^1.0.19
+        version: 1.0.19
       prettier:
         specifier: ^3.9.5
         version: 3.9.5
@@ -141,6 +144,9 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40jridgewell%2Fsourcemap-codec%2F-%2Fsourcemap-codec-1.5.5.tgz}
+
+  '@leeoniya/ufuzzy@1.0.19':
+    resolution: {integrity: sha512-0pikDeYt0IHEUPza5RTCDXc/17S1pTrYnReEMp8Aa6k1ovzw5QdZLwicW8TjljwEZRb6oYag0xmALohrcq/yOQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@leeoniya/ufuzzy/-/ufuzzy-1.0.19.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40leeoniya%2Fufuzzy%2F-%2Fufuzzy-1.0.19.tgz}
 
   '@napi-rs/wasm-runtime@1.1.6':
     resolution: {integrity: sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@napi-rs/wasm-runtime/-/wasm-runtime-1.1.6.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40napi-rs%2Fwasm-runtime%2F-%2Fwasm-runtime-1.1.6.tgz}
@@ -995,6 +1001,8 @@ snapshots:
   '@exodus/bytes@1.15.1': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
+
+  '@leeoniya/ufuzzy@1.0.19': {}
 
   '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
