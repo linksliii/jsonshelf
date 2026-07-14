@@ -19,6 +19,12 @@ export default function EditorPane({ value, onChange, onFormat, onSave }: Props)
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
+  // 用 ref 持有最新回调:编辑器只创建一次,但 keymap/updateListener
+  // 通过 ref 始终调用最新的 onFormat/onSave/onChange,避免陈旧闭包
+  // (否则 keymap 会捕获首次渲染的 onFormat,其闭包里的 content 永远是初始空串)。
+  const cbRef = useRef({ onChange, onFormat, onSave });
+  cbRef.current = { onChange, onFormat, onSave };
+
   useEffect(() => {
     if (!hostRef.current) return;
     const state = EditorState.create({
@@ -31,12 +37,12 @@ export default function EditorPane({ value, onChange, onFormat, onSave }: Props)
         linter(jsonParseLinter()),
         lintGutter(),
         keymap.of([
-          { key: "Shift-Alt-f", run: () => { onFormat(); return true; } },
-          { key: "Mod-s", run: () => { onSave(); return true; } },
+          { key: "Shift-Alt-f", run: () => { cbRef.current.onFormat(); return true; } },
+          { key: "Mod-s", run: () => { cbRef.current.onSave(); return true; } },
           ...defaultKeymap, ...historyKeymap, ...searchKeymap,
         ]),
         EditorView.updateListener.of((u) => {
-          if (u.docChanged) onChange(u.state.doc.toString());
+          if (u.docChanged) cbRef.current.onChange(u.state.doc.toString());
         }),
       ],
     });

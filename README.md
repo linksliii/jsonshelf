@@ -48,6 +48,12 @@ cargo check          # 后端编译检查(在 src-tauri/ 下)
 cargo tauri build    # 生成 src-tauri/target/release/bundle/macos/JSONShelf.app 与 .dmg
 ```
 
+产物:
+- `.app`(`bundle/macos/JSONShelf.app`,约 15MB)——核心可运行产物,可直接双击运行或拖入"应用程序"。
+- `.dmg`(`bundle/dmg/`)——磁盘镜像。
+
+> **注意**:`.dmg` 的最后一步用 AppleScript 通过 Finder 设置镜像窗口外观,需在**正常桌面会话**中运行 `cargo tauri build`(非 SSH/后台/无 GUI 环境),否则 `bundle_dmg.sh` 会失败——此时 `.app` 仍已成功生成,不受影响。
+
 ## 镜像配置(国内网络)
 
 ```bash
