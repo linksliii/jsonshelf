@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import SettingsPanel from "../SettingsPanel";
 
 const baseProps = {
-  hotkeys: { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S" },
+  hotkeys: { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S", new: "Cmd+T" },
   onChangeHotkey: () => {},
   hideOnBlur: false,
   onChangeHideOnBlur: () => {},
@@ -21,6 +21,21 @@ describe("SettingsPanel", () => {
     expect(screen.getByText("呼出面板")).toBeInTheDocument();
     // formatHotkey 规范化: Alt+Cmd+J
     expect(screen.getByText("Alt+Cmd+J")).toBeInTheDocument();
+  });
+
+  it("展示新建快捷键行(规范化 Cmd+T)", () => {
+    render(<SettingsPanel open {...baseProps} />);
+    expect(screen.getByText("新建")).toBeInTheDocument();
+    expect(screen.getByText("Cmd+T")).toBeInTheDocument();
+  });
+
+  it("点击新建行的录制并按下组合键触发 onChangeHotkey('new', ...)", () => {
+    const onChangeHotkey = vi.fn();
+    render(<SettingsPanel open {...baseProps} onChangeHotkey={onChangeHotkey} />);
+    // 第 4 个"录制"对应 new 行
+    fireEvent.click(screen.getAllByText("录制")[3]);
+    fireEvent.keyDown(window, { key: "n", metaKey: true });
+    expect(onChangeHotkey).toHaveBeenCalledWith("new", "Cmd+N");
   });
 
   it("点击录制后按下组合键触发 onChangeHotkey", () => {

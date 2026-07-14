@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { formatHotkey, hotkeyFromEvent, parseHotkey } from "../lib/hotkeys";
 
-type Which = "toggle" | "format" | "save";
+type Which = "toggle" | "format" | "save" | "new";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  hotkeys: { toggle: string; format: string; save: string };
+  hotkeys: { toggle: string; format: string; save: string; new: string };
   onChangeHotkey: (which: Which, value: string) => void;
   hideOnBlur: boolean;
   onChangeHideOnBlur: (v: boolean) => void;
@@ -16,6 +16,7 @@ const ROWS: { which: Which; label: string }[] = [
   { which: "toggle", label: "呼出面板" },
   { which: "format", label: "格式化" },
   { which: "save", label: "保存到文件" },
+  { which: "new", label: "新建" },
 ];
 
 // 尽量以规范形式展示;若存储值无法解析则原样显示。

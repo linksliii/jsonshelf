@@ -22,4 +22,12 @@ describe("hotkeyConflicts", () => {
   it("others 中不可解析项被忽略", () => {
     expect(hotkeyConflicts("Cmd+S", ["Ctrl+Shift", "Cmd+S"])).toBe(true);
   });
+
+  it("新建键 Cmd+T 与其他三键(呼出/格式化/保存)均不冲突", () => {
+    expect(hotkeyConflicts("Cmd+T", ["Alt+Cmd+J", "Shift+Alt+F", "Cmd+S"])).toBe(false);
+  });
+
+  it("新建键与另三键之一相同判为冲突", () => {
+    expect(hotkeyConflicts("Cmd+T", ["Alt+Cmd+J", "Shift+Alt+F", "Cmd+T"])).toBe(true);
+  });
 });

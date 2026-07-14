@@ -8,7 +8,7 @@ import { formatJSON, minifyJSON, formatOther } from "./lib/formatter";
 import { jsonStats, isValidJSON } from "./lib/jsonStats";
 import { autoTitle, safeFileName } from "./lib/title";
 import { fuzzyRank } from "./lib/fuzzy";
-import { hotkeysEqual, parseHotkey, toTauriAccelerator } from "./lib/hotkeys";
+import { hotkeyFromEvent, hotkeysEqual, parseHotkey, toTauriAccelerator } from "./lib/hotkeys";
 import {
   PANEL_DEFAULT, PANEL_COLLAPSE_THRESHOLD, clampWidth,
 } from "./lib/panelWidth";
@@ -19,7 +19,7 @@ import {
 } from "./lib/ipc";
 import type { HistoryEntry } from "./types";
 
-const DEFAULT_HK = { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S" };
+const DEFAULT_HK = { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S", new: "Cmd+T" };
 
 // 冲突检测:value 是否与 others 中任一已绑定键(可解析的)相同。
 // 导出以便单测;value 无法解析时视为无冲突(由调用方另行拒绝无效键)。
@@ -44,6 +44,7 @@ export default function App() {
   const [hkToggle, setHkToggle] = useState(DEFAULT_HK.toggle);
   const [hkFormat, setHkFormat] = useState(DEFAULT_HK.format);
   const [hkSave, setHkSave] = useState(DEFAULT_HK.save);
+  const [hkNew, setHkNew] = useState(DEFAULT_HK.new);
   const [hideOnBlur, setHideOnBlurState] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // 历史面板:可折叠(Cmd+B / 拖到最窄)+ 可拖拽调宽,两者均持久化到 settings。
@@ -88,6 +89,12 @@ export default function App() {
     if ("__TAURI_INTERNALS__" in window) getCurrentWindow().hide();
   }, []);
 
+  // 新建快捷键(默认 Cmd+T)与 handleNew 用 ref 镜像,供 window 级 keydown 监听读到最新值,
+  // 避免把它们放进 effect 依赖后频繁重建监听。handleNew 定义在下方,先声明 ref 后同步。
+  const hkNewRef = useRef(hkNew);
+  hkNewRef.current = hkNew;
+  const handleNewRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Cmd+B 切换历史面板显隐。放在 window 级(App)处理,不论焦点在编辑器还是别处都生效;
@@ -96,6 +103,18 @@ export default function App() {
         e.preventDefault();
         setPanelHidden((h) => !h);
         return;
+      }
+      // 新建快捷键(默认 Cmd+T,可自定义)。与 Cmd+B 一样在 window 级处理,焦点在编辑器时
+      // 事件仍冒泡到此(编辑器只消费 format/save/Esc)。用 e.code 版 hotkeyFromEvent 匹配,
+      // 与编辑器一致(不受 macOS Option 合字影响),命中即 preventDefault + 新建。
+      const hkNewParsed = parseHotkey(hkNewRef.current);
+      if (hkNewParsed) {
+        const pressed = hotkeyFromEvent(e);
+        if (pressed && hotkeysEqual(pressed, hkNewParsed)) {
+          e.preventDefault();
+          handleNewRef.current();
+          return;
+        }
       }
       // 已被处理的 Esc 不再隐藏窗口:CodeMirror 关闭查找面板(preventDefault)、
       // 或 EditorPane 已主动隐藏窗口(preventDefault)后事件都带 defaultPrevented,
@@ -111,10 +130,11 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const [toggle, format, save, blur, pWidth, pHidden] = await Promise.all([
+        const [toggle, format, save, hkNewVal, blur, pWidth, pHidden] = await Promise.all([
           getSetting("hotkey.toggle"),
           getSetting("hotkey.format"),
           getSetting("hotkey.save"),
+          getSetting("hotkey.new"),
           getSetting("hideOnBlur"),
           getSetting("panelWidth"),
           getSetting("panelHidden"),
@@ -123,6 +143,7 @@ export default function App() {
         setHkToggle(tg);
         setHkFormat(format ?? DEFAULT_HK.format);
         setHkSave(save ?? DEFAULT_HK.save);
+        setHkNew(hkNewVal ?? DEFAULT_HK.new);
 
         const hb = (blur ?? "false") === "true";
         setHideOnBlurState(hb);
@@ -287,6 +308,8 @@ export default function App() {
     selectedTitleRef.current = null;
     setStatus({ kind: "idle", message: "" });
   }, []);
+  // 同步最新 handleNew 到 ref,供 window 级 keydown 监听调用(避免陈旧闭包)。
+  handleNewRef.current = handleNew;
 
   const stats = useMemo(() => jsonStats(content), [content]);
   // 校验指示:仅在 JSON 语言且内容非空时给出真/假,否则 null(不显示)。
@@ -332,17 +355,17 @@ export default function App() {
     reload();
   }, [entries, reload]);
 
-  const setterFor = { toggle: setHkToggle, format: setHkFormat, save: setHkSave };
+  const setterFor = { toggle: setHkToggle, format: setHkFormat, save: setHkSave, new: setHkNew };
 
   const onChangeHotkey = useCallback(
-    async (which: "toggle" | "format" | "save", value: string) => {
-      const all = { toggle: hkToggle, format: hkFormat, save: hkSave };
+    async (which: "toggle" | "format" | "save" | "new", value: string) => {
+      const all = { toggle: hkToggle, format: hkFormat, save: hkSave, new: hkNew };
       const prev = all[which];
 
-      // 校验:必须是合法快捷键,且不能与另外两个已绑定键冲突。
+      // 校验:必须是合法快捷键,且不能与另外三个已绑定键冲突。
       const parsed = parseHotkey(value);
       if (!parsed) { setStatus({ kind: "error", message: "无效快捷键" }); return; }
-      const others = (["toggle", "format", "save"] as const)
+      const others = (["toggle", "format", "save", "new"] as const)
         .filter((w) => w !== which)
         .map((w) => all[w]);
       if (hotkeyConflicts(value, others)) {
@@ -364,7 +387,7 @@ export default function App() {
         }
       }
     },
-    [hkToggle, hkFormat, hkSave],
+    [hkToggle, hkFormat, hkSave, hkNew],
   );
 
   const onChangeHideOnBlur = useCallback(async (v: boolean) => {
@@ -426,7 +449,7 @@ export default function App() {
       <SettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        hotkeys={{ toggle: hkToggle, format: hkFormat, save: hkSave }}
+        hotkeys={{ toggle: hkToggle, format: hkFormat, save: hkSave, new: hkNew }}
         onChangeHotkey={onChangeHotkey}
         hideOnBlur={hideOnBlur}
         onChangeHideOnBlur={onChangeHideOnBlur}

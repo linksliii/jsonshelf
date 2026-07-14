@@ -32,7 +32,8 @@ pub fn toggle_panel(window: &WebviewWindow) {
     if window.is_visible().unwrap_or(false) {
         let _ = window.hide();
     } else {
-        let _ = window.center();
+        // 不再 center():窗口在上次所在位置重新出现(window-state 插件在移动时持久化、
+        // 恢复上次位置),呼出时保留用户摆放的位置。
         let _ = window.show();
         let _ = window.set_focus();
     }
