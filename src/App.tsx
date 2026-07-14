@@ -71,6 +71,10 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // 已被处理的 Esc 不再隐藏窗口:CodeMirror 关闭查找面板(preventDefault)、
+      // 或 EditorPane 已主动隐藏窗口(preventDefault)后事件都带 defaultPrevented,
+      // 这里跳过可避免"关查找面板连带隐藏窗口"以及正常隐藏时的重复调用。
+      if (e.defaultPrevented) return;
       if (e.key === "Escape") hideWindow();
     };
     window.addEventListener("keydown", onKey);

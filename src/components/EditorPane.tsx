@@ -41,12 +41,15 @@ export default function EditorPane({
     const sv: Hotkey | null = parseHotkey(svRaw);
     return EditorView.domEventHandlers({
       keydown: (e, view) => {
-        // Esc:编辑器未占用(无打开的搜索面板)时交给 onEscape(如隐藏窗口)。
-        // 搜索面板打开时不拦截,交由 searchKeymap 关闭面板。
+        // Esc:搜索面板打开时不拦截,交由 searchKeymap 关闭面板;CM 处理后会
+        // preventDefault,冒泡到 window 时带 defaultPrevented,故不会连带隐藏窗口。
+        // 无搜索面板时编辑器主动处理 Esc:调用 onEscape 隐藏窗口,并 preventDefault
+        // + 消费事件,避免冒泡到 window 级监听造成重复调用(double-fire)。
         if (e.key === "Escape") {
           if (searchPanelOpen(view.state)) return false;
           cbRef.current.onEscape?.();
-          return false; // 让事件继续传播,window 级监听可作为兜底
+          e.preventDefault();
+          return true;
         }
         const pressed = hotkeyFromEvent(e);
         if (!pressed) return false;
