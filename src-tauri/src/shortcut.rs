@@ -18,6 +18,8 @@ pub fn register(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             })
             .build(),
     )?;
-    app.global_shortcut().register(toggle)?;
+    if let Err(e) = app.global_shortcut().register(toggle) {
+        eprintln!("[jsonshelf] 全局快捷键 Alt+Cmd+J 注册失败(可能被其他应用占用): {e}");
+    }
     Ok(())
 }

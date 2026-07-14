@@ -28,7 +28,9 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") getCurrentWindow().hide();
+      if (e.key === "Escape" && "__TAURI_INTERNALS__" in window) {
+        getCurrentWindow().hide();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
