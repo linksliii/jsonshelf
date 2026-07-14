@@ -5,6 +5,10 @@ import { relativeTime } from "../lib/relativeTime";
 interface Props {
   entry: HistoryEntry;
   selected: boolean;
+  // 右键菜单坐标(该行菜单打开时非 null);状态由 HistoryPanel 单一管理,保证同时只有一个菜单。
+  menuPos: { x: number; y: number } | null;
+  onOpenMenu: (id: number, pos: { x: number; y: number }) => void;
+  onCloseMenu: () => void;
   onSelect: (e: HistoryEntry) => void;
   onRename: (id: number, title: string) => void;
   onTogglePin: (id: number, pinned: boolean) => void;
@@ -13,19 +17,19 @@ interface Props {
 }
 
 export default function HistoryItem({
-  entry, selected, onSelect, onRename, onTogglePin, onDelete, onCopyContent,
+  entry, selected, menuPos, onOpenMenu, onCloseMenu,
+  onSelect, onRename, onTogglePin, onDelete, onCopyContent,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(entry.title);
-  // 右键菜单相对视口的坐标;null 表示未打开。
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const menu = menuPos;
 
   // 菜单打开时,点击别处或 Esc 关闭。Esc 需 stopPropagation,避免连带触发 App 的隐藏窗口。
   useEffect(() => {
     if (!menu) return;
-    const close = () => setMenu(null);
+    const close = () => onCloseMenu();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); setMenu(null); }
+      if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); onCloseMenu(); }
     };
     window.addEventListener("click", close);
     window.addEventListener("keydown", onKey, true);
@@ -33,7 +37,7 @@ export default function HistoryItem({
       window.removeEventListener("click", close);
       window.removeEventListener("keydown", onKey, true);
     };
-  }, [menu]);
+  }, [menu, onCloseMenu]);
 
   const startRename = () => { setDraft(entry.title); setEditing(true); };
 
@@ -41,7 +45,7 @@ export default function HistoryItem({
     <div
       className={`history-item${selected ? " selected" : ""}`}
       onClick={() => onSelect(entry)}
-      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY }); }}
+      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onOpenMenu(entry.id, { x: e.clientX, y: e.clientY }); }}
     >
       {editing ? (
         <input
@@ -74,12 +78,12 @@ export default function HistoryItem({
           style={{ left: menu.x, top: menu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button role="menuitem" onClick={() => { setMenu(null); startRename(); }}>重命名</button>
-          <button role="menuitem" onClick={() => { setMenu(null); onCopyContent(entry); }}>复制内容</button>
-          <button role="menuitem" onClick={() => { setMenu(null); onTogglePin(entry.id, !entry.pinned); }}>
+          <button role="menuitem" onClick={() => { onCloseMenu(); startRename(); }}>重命名</button>
+          <button role="menuitem" onClick={() => { onCloseMenu(); onCopyContent(entry); }}>复制内容</button>
+          <button role="menuitem" onClick={() => { onCloseMenu(); onTogglePin(entry.id, !entry.pinned); }}>
             {entry.pinned ? "取消固定" : "固定"}
           </button>
-          <button role="menuitem" onClick={() => { setMenu(null); onDelete(entry.id); }}>删除</button>
+          <button role="menuitem" onClick={() => { onCloseMenu(); onDelete(entry.id); }}>删除</button>
         </div>
       ) : null}
     </div>
