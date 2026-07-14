@@ -13,8 +13,16 @@ export function autoTitle(content: string): string {
       const keys = Object.keys(parsed);
       if (keys.length > 0) return keys[0].slice(0, 40);
     }
-    return "Untitled";
+    // JSON 基本类型(字符串/数字/null 等)或空对象:走内容预览回退。
+    return contentPreview(content);
   } catch {
-    return "Untitled";
+    // 非法 JSON:同样回退到内容预览。
+    return contentPreview(content);
   }
+}
+
+// 折叠空白后取前 40 字符作为标题;全空白/空内容回退 "Untitled"。
+function contentPreview(content: string): string {
+  const preview = content.replace(/\s+/g, " ").trim().slice(0, 40);
+  return preview === "" ? "Untitled" : preview;
 }

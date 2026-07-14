@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { HistoryEntry } from "../types";
-import { relativeTime } from "../lib/relativeTime";
+import { formatAbsTime } from "../lib/formatAbsTime";
 
 interface Props {
   entry: HistoryEntry;
@@ -63,7 +63,7 @@ export default function HistoryItem({
             {entry.pinned ? <span className="pin-indicator" aria-hidden="true">📌 </span> : null}
             <span className="title-text">{entry.title}</span>
           </span>
-          <span className="history-time">{relativeTime(entry.updatedAt, Date.now())}</span>
+          <span className="history-time">创建 {formatAbsTime(entry.createdAt)} · 保存 {formatAbsTime(entry.updatedAt)}</span>
         </span>
       )}
       <button aria-label="固定" onClick={(e) => { e.stopPropagation(); onTogglePin(entry.id, !entry.pinned); }}>

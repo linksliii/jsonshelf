@@ -45,6 +45,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentIdRef = useRef<number | null>(null);
+  // 始终保存当前选中条目的最新标题(含被 rename 后的);导出文件名以此为准,
+  // 不受搜索过滤后 entries 中查不到该条目的影响。
+  const selectedTitleRef = useRef<string | null>(null);
   const savingRef = useRef<Promise<void> | null>(null);
   const savedStatusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // App 的 Esc 隐藏窗口逻辑需在录制/设置打开时让位给 SettingsPanel。
@@ -127,12 +130,14 @@ export default function App() {
       savingRef.current = (savingRef.current ?? Promise.resolve()).then(async () => {
         try {
           const wasNew = currentIdRef.current == null;
+          const insertTitle = autoTitle(content);
           const id = await upsertHistory({
-            id: currentIdRef.current, title: autoTitle(content), content, language,
+            id: currentIdRef.current, title: insertTitle, content, language,
           });
           currentIdRef.current = id;   // 同步,下次运行即可见
-          // 新插入的条目让其在列表中显示为选中(currentIdRef 之前为 null)。
-          if (wasNew) setSelectedId(id);
+          // 新插入的条目让其在列表中显示为选中(currentIdRef 之前为 null),
+          // 并同步导出用标题为本次 INSERT 所用标题。
+          if (wasNew) { setSelectedId(id); selectedTitleRef.current = insertTitle; }
           reload();
           setStatus({ kind: "ok", message: "已存入历史" });
           if (savedStatusRef.current) clearTimeout(savedStatusRef.current);
@@ -167,18 +172,15 @@ export default function App() {
 
   const handleSave = useCallback(async () => {
     try {
-      // 文件名优先沿用当前选中历史条目的(可能被用户重命名过的)标题;
-      // 无选中条目时回退到按内容首键推断的 autoTitle。均经 safeFileName 清洗。
-      const entryTitle = selectedId != null
-        ? entries.find((x) => x.id === selectedId)?.title
-        : undefined;
-      const base = safeFileName(entryTitle ?? autoTitle(content));
+      // 文件名优先沿用当前选中条目的最新标题(含被 rename 后的,存于 selectedTitleRef,
+      // 不受搜索过滤影响);无选中条目时回退到按内容推断的 autoTitle。均经 safeFileName 清洗。
+      const base = safeFileName(selectedTitleRef.current ?? autoTitle(content));
       const path = await exportJSON(content, `${base}.json`);
       setStatus(path ? { kind: "ok", message: `已保存: ${path}` } : { kind: "idle", message: "已取消" });
     } catch (e) {
       setStatus({ kind: "error", message: `保存失败: ${(e as Error).message}` });
     }
-  }, [content, selectedId, entries]);
+  }, [content]);
 
   // 复制当前内容到剪贴板。Tauri 2 webview 内 navigator.clipboard 可用,失败再提示。
   const handleCopy = useCallback(async () => {
@@ -196,6 +198,7 @@ export default function App() {
     setContent("");
     currentIdRef.current = null;
     setSelectedId(null);
+    selectedTitleRef.current = null;
     setStatus({ kind: "idle", message: "" });
   }, []);
 
@@ -217,6 +220,7 @@ export default function App() {
     setContent(e.content); setLanguage(e.language);
     currentIdRef.current = e.id;
     setSelectedId(e.id);
+    selectedTitleRef.current = e.title;
   }, []);
 
   // 右键菜单"复制内容":将该条目内容写入剪贴板(不影响当前编辑内容)。
@@ -305,7 +309,12 @@ export default function App() {
           entries={entries}
           selectedId={selectedId}
           onSelect={handleSelect}
-          onRename={async (id, t) => { await renameHistory(id, t); reload(); }}
+          onRename={async (id, t) => {
+            await renameHistory(id, t);
+            // 重命名的若是当前选中条目,同步导出用标题(即使被搜索过滤掉也不丢失)。
+            if (id === currentIdRef.current) selectedTitleRef.current = t;
+            reload();
+          }}
           onTogglePin={async (id, p) => { await togglePin(id, p); reload(); }}
           onDelete={handleDelete}
           onCopyContent={handleCopyContent}

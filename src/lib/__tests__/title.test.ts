@@ -8,9 +8,21 @@ describe("autoTitle", () => {
   it("数组给出元素计数摘要", () => {
     expect(autoTitle("[1,2,3]")).toBe("array[3]");
   });
-  it("非法/空内容回退为 Untitled", () => {
+  it("空/全空白内容回退为 Untitled", () => {
     expect(autoTitle("")).toBe("Untitled");
-    expect(autoTitle("{bad}")).toBe("Untitled");
+    expect(autoTitle("   \n\t  ")).toBe("Untitled");
+  });
+  it("非法 JSON 回退为内容预览(而非 Untitled)", () => {
+    expect(autoTitle("{bad}")).toBe("{bad}");
+  });
+  it("多行/含空白内容折叠空白后取预览", () => {
+    expect(autoTitle("hello\n  world\t!")).toBe("hello world !");
+  });
+  it("超长内容预览截断到 40 字符", () => {
+    const long = "x".repeat(60);
+    const t = autoTitle(long);
+    expect(t.length).toBe(40);
+    expect(t).toBe("x".repeat(40));
   });
   it("超长键截断到 40 字符", () => {
     const longKey = "k".repeat(60);
