@@ -29,6 +29,18 @@ importers:
       '@leeoniya/ufuzzy':
         specifier: ^1.0.19
         version: 1.0.19
+      '@tauri-apps/api':
+        specifier: ^2.11.1
+        version: 2.11.1
+      '@tauri-apps/plugin-dialog':
+        specifier: ^2.7.1
+        version: 2.7.1
+      '@tauri-apps/plugin-fs':
+        specifier: ^2.5.1
+        version: 2.5.1
+      '@tauri-apps/plugin-sql':
+        specifier: ^2.4.0
+        version: 2.4.0
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
@@ -317,6 +329,18 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@standard-schema/spec/-/spec-1.1.0.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40standard-schema%2Fspec%2F-%2Fspec-1.1.0.tgz}
+
+  '@tauri-apps/api@2.11.1':
+    resolution: {integrity: sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@tauri-apps/api/-/api-2.11.1.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40tauri-apps%2Fapi%2F-%2Fapi-2.11.1.tgz}
+
+  '@tauri-apps/plugin-dialog@2.7.1':
+    resolution: {integrity: sha512-OK1UBXYt+ojcmxMktzzuyonYIFta8CmAASpX+CA+DTGK24KlHjhYI6x2iOJ/TjZF4N7/ACK1oFmEOjIY9IhzOQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@tauri-apps/plugin-dialog/-/plugin-dialog-2.7.1.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40tauri-apps%2Fplugin-dialog%2F-%2Fplugin-dialog-2.7.1.tgz}
+
+  '@tauri-apps/plugin-fs@2.5.1':
+    resolution: {integrity: sha512-9Lz+Jopp6QyeEWhlpkMx4R/+P9HgR+AVAI4vOZhlT8Xaymtz8iVI/Ov984/XTqgJz/5gz5NretqPB/XEMS3NhQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@tauri-apps/plugin-fs/-/plugin-fs-2.5.1.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40tauri-apps%2Fplugin-fs%2F-%2Fplugin-fs-2.5.1.tgz}
+
+  '@tauri-apps/plugin-sql@2.4.0':
+    resolution: {integrity: sha512-SIICc5JlnK6OrBZzOw7MmhXHPlmASpt5zLWIu10WW4kLr5cDYOXHdV2MoCgYQkgZLQfyBYgF3SQa5XCisUiQkw==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@tauri-apps/plugin-sql/-/plugin-sql-2.4.0.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40tauri-apps%2Fplugin-sql%2F-%2Fplugin-sql-2.4.0.tgz}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@testing-library/dom/-/dom-10.4.1.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40testing-library%2Fdom%2F-%2Fdom-10.4.1.tgz}
@@ -1206,6 +1230,20 @@ snapshots:
   '@rolldown/pluginutils@1.0.1': {}
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@tauri-apps/api@2.11.1': {}
+
+  '@tauri-apps/plugin-dialog@2.7.1':
+    dependencies:
+      '@tauri-apps/api': 2.11.1
+
+  '@tauri-apps/plugin-fs@2.5.1':
+    dependencies:
+      '@tauri-apps/api': 2.11.1
+
+  '@tauri-apps/plugin-sql@2.4.0':
+    dependencies:
+      '@tauri-apps/api': 2.11.1
 
   '@testing-library/dom@10.4.1':
     dependencies:
