@@ -67,9 +67,10 @@ export async function upsertHistory(entry: {
     );
     return res.lastInsertId as number;
   }
+  // 不更新 title:避免覆盖用户经 renameHistory 设置的标题(title 由 rename 独立入口负责)
   await d.execute(
-    "UPDATE history SET title=?, content=?, language=?, updated_at=? WHERE id=?",
-    [entry.title, entry.content, entry.language, now, entry.id]
+    "UPDATE history SET content=?, language=?, updated_at=? WHERE id=?",
+    [entry.content, entry.language, now, entry.id]
   );
   return entry.id;
 }

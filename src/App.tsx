@@ -15,28 +15,32 @@ export default function App() {
   const [content, setContent] = useState("");
   const [language, setLanguage] = useState("json");
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
-  const [currentId, setCurrentId] = useState<number | null>(null);
   const [saveToHistory, setSaveToHistory] = useState(true);
   const [status, setStatus] = useState<{ kind: "ok" | "error" | "idle"; message: string }>({ kind: "idle", message: "" });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentIdRef = useRef<number | null>(null);
+  const savingRef = useRef<Promise<void> | null>(null);
 
   const refresh = useCallback(async () => {
     try { setEntries(await listHistory()); } catch { /* DB 不可用不阻塞编辑 */ }
   }, []);
-  useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
     if (!saveToHistory || !content.trim()) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const id = await upsertHistory({ id: currentId, title: autoTitle(content), content, language });
-        if (currentId == null) setCurrentId(id);
-        refresh();
-      } catch { /* 写失败不打断 */ }
+    debounceRef.current = setTimeout(() => {
+      savingRef.current = (savingRef.current ?? Promise.resolve()).then(async () => {
+        try {
+          const id = await upsertHistory({
+            id: currentIdRef.current, title: autoTitle(content), content, language,
+          });
+          currentIdRef.current = id;   // 同步,下次运行即可见
+          refresh();
+        } catch { /* 写失败不打断 */ }
+      });
     }, 800);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [content, language, saveToHistory, currentId, refresh]);
+  }, [content, language, saveToHistory, refresh]);
 
   const handleFormat = useCallback(async () => {
     try {
@@ -70,7 +74,8 @@ export default function App() {
   }, []);
 
   const handleSelect = useCallback((e: HistoryEntry) => {
-    setContent(e.content); setLanguage(e.language); setCurrentId(e.id);
+    setContent(e.content); setLanguage(e.language);
+    currentIdRef.current = e.id;
   }, []);
 
   return (
@@ -88,7 +93,7 @@ export default function App() {
           onSelect={handleSelect}
           onRename={async (id, t) => { await renameHistory(id, t); refresh(); }}
           onTogglePin={async (id, p) => { await togglePin(id, p); refresh(); }}
-          onDelete={async (id) => { await deleteHistory(id); if (id === currentId) setCurrentId(null); refresh(); }}
+          onDelete={async (id) => { await deleteHistory(id); if (id === currentIdRef.current) currentIdRef.current = null; refresh(); }}
           onSearch={handleSearch}
         />
       </div>
