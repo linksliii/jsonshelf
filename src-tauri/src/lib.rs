@@ -1,3 +1,5 @@
+mod commands;
+
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -27,6 +29,7 @@ pub fn run() {
       }
       Ok(())
     })
+    .invoke_handler(tauri::generate_handler![commands::export::export_json])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

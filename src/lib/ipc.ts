@@ -1,4 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
+import { invoke } from "@tauri-apps/api/core";
 import type { HistoryEntry } from "../types";
 
 let dbPromise: Promise<Database> | null = null;
@@ -90,4 +91,8 @@ export async function togglePin(id: number, pinned: boolean): Promise<void> {
 export async function deleteHistory(id: number): Promise<void> {
   const d = await db();
   await d.execute("DELETE FROM history WHERE id=?", [id]);
+}
+
+export async function exportJSON(content: string, defaultName: string): Promise<string | null> {
+  return invoke<string | null>("export_json", { content, defaultName });
 }
