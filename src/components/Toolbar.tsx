@@ -7,6 +7,7 @@ interface Props {
   saveToHistory: boolean;
   onToggleSaveToHistory: (v: boolean) => void;
   status: { kind: "ok" | "error" | "idle"; message: string };
+  onOpenSettings: () => void;
 }
 
 const LANGUAGES = ["json", "yaml", "html", "css", "javascript"];
@@ -26,6 +27,7 @@ export default function Toolbar(props: Props) {
         保存到历史
       </label>
       <span className={`status status-${props.status.kind}`}>{props.status.message}</span>
+      <button className="toolbar-settings" onClick={props.onOpenSettings} aria-label="设置" title="设置">⚙</button>
     </div>
   );
 }

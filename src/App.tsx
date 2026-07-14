@@ -3,15 +3,25 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import EditorPane from "./components/EditorPane";
 import HistoryPanel from "./components/HistoryPanel";
 import Toolbar from "./components/Toolbar";
+import SettingsPanel from "./components/SettingsPanel";
 import { formatJSON, minifyJSON, formatOther } from "./lib/formatter";
 import { autoTitle } from "./lib/title";
 import { fuzzyRank } from "./lib/fuzzy";
+import { parseHotkey, toCodeMirror, toTauriAccelerator } from "./lib/hotkeys";
 import {
   listHistory, searchHistory, upsertHistory,
   renameHistory, togglePin, deleteHistory, exportJSON,
-  getSetting, setHideOnBlur,
+  getSetting, setSetting, setHideOnBlur, rebindToggleShortcut,
 } from "./lib/ipc";
 import type { HistoryEntry } from "./types";
+
+const DEFAULT_HK = { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S" };
+
+// 解析规范快捷键串为 CodeMirror keymap 串;解析失败时退回默认。
+function cmKey(raw: string, fallback: string): string {
+  const h = parseHotkey(raw);
+  return h ? toCodeMirror(h) : fallback;
+}
 
 export default function App() {
   const [content, setContent] = useState("");
@@ -19,10 +29,18 @@ export default function App() {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [saveToHistory, setSaveToHistory] = useState(true);
   const [status, setStatus] = useState<{ kind: "ok" | "error" | "idle"; message: string }>({ kind: "idle", message: "" });
+  const [hkToggle, setHkToggle] = useState(DEFAULT_HK.toggle);
+  const [hkFormat, setHkFormat] = useState(DEFAULT_HK.format);
+  const [hkSave, setHkSave] = useState(DEFAULT_HK.save);
+  const [hideOnBlur, setHideOnBlurState] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentIdRef = useRef<number | null>(null);
   const savingRef = useRef<Promise<void> | null>(null);
   const savedStatusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // App 的 Esc 隐藏窗口逻辑需在录制/设置打开时让位给 SettingsPanel。
+  const settingsOpenRef = useRef(false);
+  settingsOpenRef.current = settingsOpen;
 
   const refresh = useCallback(async () => {
     try { setEntries(await listHistory()); } catch { /* DB 不可用不阻塞编辑 */ }
@@ -30,6 +48,10 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // 设置面板打开时,Esc 交给 SettingsPanel(取消录制/关闭),不隐藏窗口。
+      // SettingsPanel 录制时用 capture 阶段 stopPropagation 已能拦截,
+      // 这里的 ref 判断是设置打开但未录制场景的双保险。
+      if (settingsOpenRef.current) return;
       if (e.key === "Escape" && "__TAURI_INTERNALS__" in window) {
         getCurrentWindow().hide();
       }
@@ -38,13 +60,34 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // 从设置读取失焦自动隐藏(默认关闭),同步给 Rust
+  // 从设置读取快捷键与失焦隐藏(带默认值),同步 Rust 状态。
   useEffect(() => {
     (async () => {
       try {
-        const v = (await getSetting("hideOnBlur")) ?? "false";
-        await setHideOnBlur(v === "true");
-      } catch { /* DB/IPC 不可用时保持 Rust 默认(关闭) */ }
+        const [toggle, format, save, blur] = await Promise.all([
+          getSetting("hotkey.toggle"),
+          getSetting("hotkey.format"),
+          getSetting("hotkey.save"),
+          getSetting("hideOnBlur"),
+        ]);
+        const tg = toggle ?? DEFAULT_HK.toggle;
+        setHkToggle(tg);
+        setHkFormat(format ?? DEFAULT_HK.format);
+        setHkSave(save ?? DEFAULT_HK.save);
+
+        const hb = (blur ?? "false") === "true";
+        setHideOnBlurState(hb);
+        await setHideOnBlur(hb);
+
+        // Rust 已在默认键(Alt+Cmd+J)注册呼出键;若存储值不同则重绑。
+        if (tg !== DEFAULT_HK.toggle) {
+          const h = parseHotkey(tg);
+          if (h) {
+            try { await rebindToggleShortcut(toTauriAccelerator(h)); }
+            catch { /* 重绑失败保持默认键有效 */ }
+          }
+        }
+      } catch { /* DB/IPC 不可用时保持前后端默认 */ }
     })();
   }, []);
 
@@ -111,6 +154,36 @@ export default function App() {
     currentIdRef.current = e.id;
   }, []);
 
+  const setterFor = { toggle: setHkToggle, format: setHkFormat, save: setHkSave };
+
+  const onChangeHotkey = useCallback(
+    async (which: "toggle" | "format" | "save", value: string) => {
+      const prev = { toggle: hkToggle, format: hkFormat, save: hkSave }[which];
+      setterFor[which](value);
+      try { await setSetting("hotkey." + which, value); } catch { /* 持久化失败不阻塞 */ }
+      if (which === "toggle") {
+        const h = parseHotkey(value);
+        if (!h) { setterFor.toggle(prev); setStatus({ kind: "error", message: "无效快捷键" }); return; }
+        try {
+          await rebindToggleShortcut(toTauriAccelerator(h));
+          setStatus({ kind: "ok", message: "呼出快捷键已更新" });
+        } catch (e) {
+          // 重绑失败:回退状态与存储,保留旧键。
+          setterFor.toggle(prev);
+          try { await setSetting("hotkey.toggle", prev); } catch { /* ignore */ }
+          setStatus({ kind: "error", message: `快捷键更新失败: ${(e as Error).message ?? e}` });
+        }
+      }
+    },
+    [hkToggle, hkFormat, hkSave],
+  );
+
+  const onChangeHideOnBlur = useCallback(async (v: boolean) => {
+    setHideOnBlurState(v);
+    try { await setSetting("hideOnBlur", String(v)); } catch { /* ignore */ }
+    try { await setHideOnBlur(v); } catch { /* ignore */ }
+  }, []);
+
   return (
     <div className="app">
       <Toolbar
@@ -118,9 +191,15 @@ export default function App() {
         onFormat={handleFormat} onMinify={handleMinify} onSave={handleSave}
         saveToHistory={saveToHistory} onToggleSaveToHistory={setSaveToHistory}
         status={status}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
       <div className="main">
-        <EditorPane value={content} onChange={setContent} onFormat={handleFormat} onSave={handleSave} />
+        <EditorPane
+          value={content} onChange={setContent}
+          onFormat={handleFormat} onSave={handleSave}
+          formatKey={cmKey(hkFormat, "Shift-Alt-f")}
+          saveKey={cmKey(hkSave, "Mod-s")}
+        />
         <HistoryPanel
           entries={entries}
           onSelect={handleSelect}
@@ -130,6 +209,14 @@ export default function App() {
           onSearch={handleSearch}
         />
       </div>
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        hotkeys={{ toggle: hkToggle, format: hkFormat, save: hkSave }}
+        onChangeHotkey={onChangeHotkey}
+        hideOnBlur={hideOnBlur}
+        onChangeHideOnBlur={onChangeHideOnBlur}
+      />
     </div>
   );
 }

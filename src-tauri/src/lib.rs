@@ -59,7 +59,8 @@ pub fn run() {
     })
     .invoke_handler(tauri::generate_handler![
       commands::export::export_json,
-      window::set_hide_on_blur_cmd
+      window::set_hide_on_blur_cmd,
+      shortcut::rebind_toggle_shortcut
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")

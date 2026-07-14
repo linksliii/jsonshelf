@@ -118,3 +118,7 @@ export async function setSetting(key: string, value: string): Promise<void> {
 export async function setHideOnBlur(enabled: boolean): Promise<void> {
   await invoke("set_hide_on_blur_cmd", { enabled });
 }
+
+export async function rebindToggleShortcut(accelerator: string): Promise<void> {
+  await invoke("rebind_toggle_shortcut", { accelerator });
+}
