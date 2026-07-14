@@ -79,6 +79,11 @@ body {
 .status-error { color: #ff7a7a; }
 .status-ok { color: #63d477; }
 
+.json-validity { font-size: 12px; }
+.json-validity-ok { color: #63d477; }
+.json-validity-error { color: #ff7a7a; }
+.json-stats { font-size: 12px; color: var(--text-muted); }
+
 /* Main split */
 .main { display: flex; flex: 1; min-height: 0; }
 

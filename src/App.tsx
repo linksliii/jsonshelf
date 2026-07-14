@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import EditorPane from "./components/EditorPane";
 import HistoryPanel from "./components/HistoryPanel";
 import Toolbar from "./components/Toolbar";
 import SettingsPanel from "./components/SettingsPanel";
 import { formatJSON, minifyJSON, formatOther } from "./lib/formatter";
+import { jsonStats, isValidJSON } from "./lib/jsonStats";
 import { autoTitle } from "./lib/title";
 import { fuzzyRank } from "./lib/fuzzy";
 import { hotkeysEqual, parseHotkey, toTauriAccelerator } from "./lib/hotkeys";
@@ -163,6 +164,31 @@ export default function App() {
     }
   }, [content]);
 
+  // 复制当前内容到剪贴板。Tauri 2 webview 内 navigator.clipboard 可用,失败再提示。
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setStatus({ kind: "ok", message: "已复制" });
+    } catch (e) {
+      setStatus({ kind: "error", message: `复制失败: ${(e as Error).message ?? e}` });
+    }
+  }, [content]);
+
+  // 新建/清空:不改动任何已加载的历史条目(currentIdRef 置空),
+  // 下次自动保存(若开启且内容非空)会新插入一条,而非覆盖旧条目。
+  const handleNew = useCallback(() => {
+    setContent("");
+    currentIdRef.current = null;
+    setStatus({ kind: "idle", message: "" });
+  }, []);
+
+  const stats = useMemo(() => jsonStats(content), [content]);
+  // 校验指示:仅在 JSON 语言且内容非空时给出真/假,否则 null(不显示)。
+  const valid = useMemo<boolean | null>(
+    () => (language === "json" && content.trim() ? isValidJSON(content) : null),
+    [language, content],
+  );
+
   // 记录关键字(state 供渲染 + ref 供 reload 立即读到),再走统一的加载逻辑。
   const handleSearch = useCallback(async (kw: string) => {
     setKeyword(kw);
@@ -221,8 +247,10 @@ export default function App() {
       <Toolbar
         language={language} onLanguageChange={setLanguage}
         onFormat={handleFormat} onMinify={handleMinify} onSave={handleSave}
+        onCopy={handleCopy} onNew={handleNew}
         saveToHistory={saveToHistory} onToggleSaveToHistory={setSaveToHistory}
         status={status}
+        stats={stats} valid={valid}
         onOpenSettings={() => setSettingsOpen(true)}
       />
       <div className="main">

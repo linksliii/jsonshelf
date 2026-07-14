@@ -5,6 +5,10 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { searchKeymap, searchPanelOpen } from "@codemirror/search";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { linter, lintGutter } from "@codemirror/lint";
+import { bracketMatching } from "@codemirror/language";
+import {
+  autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap,
+} from "@codemirror/autocomplete";
 import { hotkeyFromEvent, hotkeysEqual, parseHotkey, type Hotkey } from "../lib/hotkeys";
 
 interface Props {
@@ -79,8 +83,15 @@ export default function EditorPane({
         json(),
         linter(jsonParseLinter()),
         lintGutter(),
+        // 基础编辑辅助:自动闭合括号/引号、括号匹配高亮、基础补全弹窗。
+        closeBrackets(),
+        bracketMatching(),
+        autocompletion(),
         handlerCompartment.current.of(buildHandlers(formatKey, saveKey)),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+        keymap.of([
+          ...closeBracketsKeymap, ...completionKeymap,
+          ...defaultKeymap, ...historyKeymap, ...searchKeymap,
+        ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) cbRef.current.onChange(u.state.doc.toString());
         }),
