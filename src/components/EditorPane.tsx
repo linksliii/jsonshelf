@@ -29,13 +29,11 @@ const darkTheme = EditorView.theme({
   // 这里不再设 100% 宽度到编辑区级别,只调美观样式,原插件自身把 overlay 定位到
   // .cm-minimap-inner 内(position:absolute; right:0),不会覆盖到编辑正文区。
   ".cm-minimap-gutter": {
-    backgroundColor: "rgba(255,255,255,0.02)",
-    borderLeft: "1px solid rgba(255,255,255,0.06)",
-    opacity: "0.75",
-    transition: "opacity 0.15s ease",
+    backgroundColor: "#101014",
+    borderLeft: "1px solid rgba(255,255,255,0.08)",
     cursor: "pointer",
   },
-  ".cm-minimap-gutter:hover": { opacity: "1" },
+  ".cm-minimap-inner": { backgroundColor: "#101014" },
   ".cm-minimap-overlay": {
     backgroundColor: "rgba(91,140,255,0.35)",
     cursor: "grab",
@@ -44,6 +42,14 @@ const darkTheme = EditorView.theme({
     backgroundColor: "rgba(91,140,255,0.5)",
     cursor: "grabbing",
   },
+  // 语法高亮: JSON/代码 token 着色(深色主题 Material/Palenight 风格)
+  ".cm-meta": { color: "#82aaff" },
+  ".cm-string": { color: "#c3e88d" },
+  ".cm-number": { color: "#f78c6c" },
+  ".cm-keyword": { color: "#c792ea" },
+  ".cm-property, .cm-propertyName": { color: "#82aaff" },
+  ".cm-lint-marker-error": { color: "#ff6b6b" },
+  ".cm-lint-marker-warning": { color: "#ffc107" },
 }, { dark: true });
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { searchKeymap, searchPanelOpen } from "@codemirror/search";
@@ -53,7 +59,7 @@ import { bracketMatching } from "@codemirror/language";
 import {
   autocompletion, closeBrackets, closeBracketsKeymap,
 } from "@codemirror/autocomplete";
-import { showMinimap } from "@replit/codemirror-minimap";
+import { showMinimap as showMinimapExtension } from "@replit/codemirror-minimap";
 import { hotkeyFromEvent, hotkeysEqual, parseHotkey, type Hotkey } from "../lib/hotkeys";
 import { jsonCompletionSource } from "../lib/jsonCompletion";
 
@@ -66,6 +72,7 @@ interface Props {
   formatKey?: string;     // 规范快捷键串,如 "Shift+Alt+F"
   saveKey?: string;       // 规范快捷键串,如 "Cmd+S"
   language?: string;      // "json" 启用语法/校验/补全;其他(如 "plaintext")为纯文本
+  showMinimap?: boolean;  // 是否显示代码缩略图(可通过快捷键切换)
 }
 
 export interface EditorHandle { view: EditorView | null; }
@@ -87,6 +94,7 @@ function buildLanguageExtensions(language: string): Extension {
 export default function EditorPane({
   value, onChange, onFormat, onSave, onEscape,
   formatKey = "Shift+Alt+F", saveKey = "Cmd+S", language = "json",
+  showMinimap = true,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -94,6 +102,8 @@ export default function EditorPane({
   const handlerCompartment = useRef(new Compartment());
   // 语言相关扩展(语法/校验/补全)放进独立 Compartment,language 变化时 reconfigure。
   const languageCompartment = useRef(new Compartment());
+  // 缩略图放进独立 Compartment,showMinimap 变化时 reconfigure(无需重建编辑器)。
+  const minimapCompartment = useRef(new Compartment());
 
   // 用 ref 持有最新回调:编辑器只创建一次,但事件处理通过 ref 始终调用最新的
   // onFormat/onSave/onChange/onEscape,避免陈旧闭包(否则会捕获首次渲染的
@@ -144,18 +154,17 @@ export default function EditorPane({
         lineNumbers(),
         highlightActiveLine(),
         history(),
-        // VS Code 风格的代码缩略图,渲染在右侧 gutter。
-        // showOverlay:"mouse-over" 仅在鼠标悬停 minimap 时显示视口指示器,
-        // 避免 "always" 常态显示的高亮矩形被误认为整块编辑区选中。
-        // displayText:"blocks" 使用色块渲染,视觉上更贴近 VS Code 且不易被误读。
-        showMinimap.compute([], () => ({
-          create: () => {
-            const dom = document.createElement("div");
-            return { dom };
-          },
-          displayText: "blocks",
-          showOverlay: "mouse-over",
-        })),
+        // 缩略图通过独立 Compartment 控制显隐,showMinimap 变化时 reconfigure。
+        minimapCompartment.current.of(showMinimap
+          ? showMinimapExtension.compute([], () => ({
+              create: () => {
+                const dom = document.createElement("div");
+                return { dom };
+              },
+              displayText: "blocks",
+              showOverlay: "mouse-over",
+            }))
+          : []),
         // 语言相关扩展(json 时含语法/校验/补全;plaintext 时为空)。
         languageCompartment.current.of(buildLanguageExtensions(language)),
         // 基础编辑辅助:自动闭合括号/引号、括号匹配高亮。对所有语言生效。
@@ -196,6 +205,27 @@ export default function EditorPane({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
+
+  // showMinimap 变化时,通过 compartment reconfigure 显隐缩略图(不重建视图)。
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: minimapCompartment.current.reconfigure(
+        showMinimap
+          ? showMinimapExtension.compute([], () => ({
+              create: () => {
+                const dom = document.createElement("div");
+                return { dom };
+              },
+              displayText: "blocks",
+              showOverlay: "mouse-over",
+            }))
+          : [],
+      ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMinimap]);
 
   // 外部 setValue(格式化/加载历史后同步)
   useEffect(() => {

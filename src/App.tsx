@@ -20,7 +20,7 @@ import {
 } from "./lib/ipc";
 import type { HistoryEntry } from "./types";
 
-const DEFAULT_HK = { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S", new: "Cmd+T" };
+const DEFAULT_HK = { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S", new: "Cmd+T", minimap: "Cmd+Shift+M" };
 
 // 冲突检测:value 是否与 others 中任一已绑定键(可解析的)相同。
 // 导出以便单测;value 无法解析时视为无冲突(由调用方另行拒绝无效键)。
@@ -46,6 +46,8 @@ export default function App() {
   const [hkFormat, setHkFormat] = useState(DEFAULT_HK.format);
   const [hkSave, setHkSave] = useState(DEFAULT_HK.save);
   const [hkNew, setHkNew] = useState(DEFAULT_HK.new);
+  const [hkMinimap, setHkMinimap] = useState(DEFAULT_HK.minimap);
+  const [showMinimap, setShowMinimap] = useState(true);
   const [hideOnBlur, setHideOnBlurState] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // 历史面板:可折叠(Cmd+B / 拖到最窄)+ 可拖拽调宽,两者均持久化到 settings。
@@ -94,6 +96,8 @@ export default function App() {
   // 避免把它们放进 effect 依赖后频繁重建监听。handleNew 定义在下方,先声明 ref 后同步。
   const hkNewRef = useRef(hkNew);
   hkNewRef.current = hkNew;
+  const hkMinimapRef = useRef(hkMinimap);
+  hkMinimapRef.current = hkMinimap;
   const handleNewRef = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -117,6 +121,16 @@ export default function App() {
           return;
         }
       }
+      // 缩略图快捷键(默认 Cmd+Shift+M,可自定义)。window 级处理,焦点在编辑器时仍冒泡到此。
+      const hkMinimapParsed = parseHotkey(hkMinimapRef.current);
+      if (hkMinimapParsed) {
+        const pressed = hotkeyFromEvent(e);
+        if (pressed && hotkeysEqual(pressed, hkMinimapParsed)) {
+          e.preventDefault();
+          setShowMinimap((v) => !v);
+          return;
+        }
+      }
       // 已被处理的 Esc 不再隐藏窗口:CodeMirror 关闭查找面板(preventDefault)、
       // 或 EditorPane 已主动隐藏窗口(preventDefault)后事件都带 defaultPrevented,
       // 这里跳过可避免"关查找面板连带隐藏窗口"以及正常隐藏时的重复调用。
@@ -131,20 +145,23 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const [toggle, format, save, hkNewVal, blur, pWidth, pHidden] = await Promise.all([
+        const [toggle, format, save, hkNewVal, hkMinimapVal, blur, pWidth, pHidden, sm] = await Promise.all([
           getSetting("hotkey.toggle"),
           getSetting("hotkey.format"),
           getSetting("hotkey.save"),
           getSetting("hotkey.new"),
+          getSetting("hotkey.minimap"),
           getSetting("hideOnBlur"),
           getSetting("panelWidth"),
           getSetting("panelHidden"),
+          getSetting("showMinimap"),
         ]);
         const tg = toggle ?? DEFAULT_HK.toggle;
         setHkToggle(tg);
         setHkFormat(format ?? DEFAULT_HK.format);
         setHkSave(save ?? DEFAULT_HK.save);
         setHkNew(hkNewVal ?? DEFAULT_HK.new);
+        setHkMinimap(hkMinimapVal ?? DEFAULT_HK.minimap);
 
         const hb = (blur ?? "false") === "true";
         setHideOnBlurState(hb);
@@ -154,6 +171,7 @@ export default function App() {
         const w = parseInt(pWidth ?? "", 10);
         setPanelWidth(Number.isFinite(w) ? clampWidth(w) : PANEL_DEFAULT);
         setPanelHidden((pHidden ?? "false") === "true");
+        setShowMinimap(sm !== "false"); // 默认 true(仅存储 "false" 时隐藏)
 
         // Rust 已在默认键(Alt+Cmd+J)注册呼出键;若存储值不同则重绑。
         if (tg !== DEFAULT_HK.toggle) {
@@ -198,6 +216,13 @@ export default function App() {
       try { await setSetting("panelHidden", String(panelHidden)); } catch { /* ignore */ }
     })();
   }, [panelHidden]);
+
+  // 持久化缩略图显隐。
+  useEffect(() => {
+    (async () => {
+      try { await setSetting("showMinimap", String(showMinimap)); } catch { /* ignore */ }
+    })();
+  }, [showMinimap]);
 
   // 分隔条拖拽调宽:按下记录起点,监听 window mousemove 实时更新宽度(面板在右侧,
   // 左拖变宽 → 用 startX - 当前 x 作为增量),mouseup 时移除监听并把最终宽度持久化。
@@ -375,17 +400,17 @@ export default function App() {
     reload();
   }, [entries, reload]);
 
-  const setterFor = { toggle: setHkToggle, format: setHkFormat, save: setHkSave, new: setHkNew };
+  const setterFor = { toggle: setHkToggle, format: setHkFormat, save: setHkSave, new: setHkNew, minimap: setHkMinimap };
 
   const onChangeHotkey = useCallback(
-    async (which: "toggle" | "format" | "save" | "new", value: string) => {
-      const all = { toggle: hkToggle, format: hkFormat, save: hkSave, new: hkNew };
+    async (which: "toggle" | "format" | "save" | "new" | "minimap", value: string) => {
+      const all = { toggle: hkToggle, format: hkFormat, save: hkSave, new: hkNew, minimap: hkMinimap };
       const prev = all[which];
 
-      // 校验:必须是合法快捷键,且不能与另外三个已绑定键冲突。
+      // 校验:必须是合法快捷键,且不能与另外四个已绑定键冲突。
       const parsed = parseHotkey(value);
       if (!parsed) { setStatus({ kind: "error", message: "无效快捷键" }); return; }
-      const others = (["toggle", "format", "save", "new"] as const)
+      const others = (["toggle", "format", "save", "new", "minimap"] as const)
         .filter((w) => w !== which)
         .map((w) => all[w]);
       if (hotkeyConflicts(value, others)) {
@@ -407,7 +432,7 @@ export default function App() {
         }
       }
     },
-    [hkToggle, hkFormat, hkSave, hkNew],
+    [hkToggle, hkFormat, hkSave, hkNew, hkMinimap],
   );
 
   const onChangeHideOnBlur = useCallback(async (v: boolean) => {
@@ -435,6 +460,7 @@ export default function App() {
           formatKey={hkFormat}
           saveKey={hkSave}
           language={language}
+          showMinimap={showMinimap}
         />
         {!panelHidden && (
           <>
@@ -469,7 +495,7 @@ export default function App() {
       <SettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        hotkeys={{ toggle: hkToggle, format: hkFormat, save: hkSave, new: hkNew }}
+        hotkeys={{ toggle: hkToggle, format: hkFormat, save: hkSave, new: hkNew, minimap: hkMinimap }}
         onChangeHotkey={onChangeHotkey}
         hideOnBlur={hideOnBlur}
         onChangeHideOnBlur={onChangeHideOnBlur}

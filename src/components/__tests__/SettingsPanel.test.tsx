@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import SettingsPanel from "../SettingsPanel";
 
 const baseProps = {
-  hotkeys: { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S", new: "Cmd+T" },
+  hotkeys: { toggle: "Alt+Cmd+J", format: "Shift+Alt+F", save: "Cmd+S", new: "Cmd+T", minimap: "Cmd+Shift+M" },
   onChangeHotkey: () => {},
   hideOnBlur: false,
   onChangeHideOnBlur: () => {},
