@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from "@codemirror/view";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 // 深色主题:通过 EditorView.theme 注册,作为编辑器 state 的一部分,
 // 天然赢过任何外部全局 CSS 的加载顺序/特异性(不再需要 !important)。
 const darkTheme = EditorView.theme({
@@ -23,8 +25,8 @@ const darkTheme = EditorView.theme({
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, & .cm-selectionBackground, .cm-content ::selection":
     { backgroundColor: "rgba(80,130,220,0.35) !important" },
   "&.cm-focused": { outline: "none" },
-  // 明确把编辑内容区光标设为文本光标,防止 minimap 的 grab/drag 光标外泄。
-  ".cm-content, .cm-scroller": { cursor: "text" },
+  // 编辑内容区:光标为文本光标,允许文本选中(UI chrome 不可选中)。
+  ".cm-content, .cm-scroller": { cursor: "text", userSelect: "text" },
   // Minimap 主题微调:内部 canvas 走深色浅描边;overlay(视口指示器)配深色高亮。
   // 这里不再设 100% 宽度到编辑区级别,只调美观样式,原插件自身把 overlay 定位到
   // .cm-minimap-inner 内(position:absolute; right:0),不会覆盖到编辑正文区。
@@ -32,6 +34,7 @@ const darkTheme = EditorView.theme({
     backgroundColor: "#101014",
     borderLeft: "1px solid rgba(255,255,255,0.08)",
     cursor: "pointer",
+    userSelect: "none",
   },
   ".cm-minimap-inner": { backgroundColor: "#101014" },
   ".cm-minimap-overlay": {
@@ -42,20 +45,25 @@ const darkTheme = EditorView.theme({
     backgroundColor: "rgba(91,140,255,0.5)",
     cursor: "grabbing",
   },
-  // 语法高亮: JSON/代码 token 着色(深色主题 Material/Palenight 风格)
-  ".cm-meta": { color: "#82aaff" },
-  ".cm-string": { color: "#c3e88d" },
-  ".cm-number": { color: "#f78c6c" },
-  ".cm-keyword": { color: "#c792ea" },
-  ".cm-property, .cm-propertyName": { color: "#82aaff" },
-  ".cm-lint-marker-error": { color: "#ff6b6b" },
-  ".cm-lint-marker-warning": { color: "#ffc107" },
+  // 代码折叠 gutter 箭头颜色(深色背景可见)
+  ".cm-foldGutter .cm-gutterElement": { color: "#6a6a72" },
 }, { dark: true });
+
+const jsonHighlightStyle = HighlightStyle.define([
+  { tag: tags.string, color: "#c3e88d" },
+  { tag: tags.number, color: "#f78c6c" },
+  { tag: tags.keyword, color: "#c792ea" },
+  { tag: tags.propertyName, color: "#82aaff" },
+  { tag: tags.bracket, color: "#89ddff" },
+  { tag: tags.punctuation, color: "#89ddff" },
+  { tag: tags.comment, color: "#6a6a72", fontStyle: "italic" },
+]);
+
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { searchKeymap, searchPanelOpen } from "@codemirror/search";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { linter, lintGutter } from "@codemirror/lint";
-import { bracketMatching } from "@codemirror/language";
+import { bracketMatching, foldGutter, foldKeymap } from "@codemirror/language";
 import {
   autocompletion, closeBrackets, closeBracketsKeymap,
 } from "@codemirror/autocomplete";
@@ -151,7 +159,9 @@ export default function EditorPane({
       doc: value,
       extensions: [
         darkTheme,
+        syntaxHighlighting(jsonHighlightStyle),
         lineNumbers(),
+        foldGutter(),
         highlightActiveLine(),
         history(),
         // 缩略图通过独立 Compartment 控制显隐,showMinimap 变化时 reconfigure。
@@ -174,6 +184,7 @@ export default function EditorPane({
         keymap.of([
           ...closeBracketsKeymap,
           ...defaultKeymap, ...historyKeymap, ...searchKeymap,
+          ...foldKeymap,
         ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) cbRef.current.onChange(u.state.doc.toString());

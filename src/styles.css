@@ -21,6 +21,7 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   font-size: 13px;
+  user-select: none;
 }
 
 .app {
@@ -37,7 +38,9 @@ body {
   gap: 8px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--divider);
+  user-select: none;
 }
+.toolbar * { user-select: none; }
 
 .toolbar button,
 .toolbar select {
@@ -121,7 +124,9 @@ body {
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.02);
+  user-select: none;
 }
+.history-panel * { user-select: none; }
 
 .history-search {
   margin: 10px;
@@ -168,7 +173,9 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
+  user-select: none;
 }
+.history-context-menu * { user-select: none; }
 .history-context-menu button {
   text-align: left;
   font-size: 12px;
@@ -271,6 +278,7 @@ body {
   /* 遮罩:压暗背后内容,与不透明面板形成清晰层次,避免双重半透明 */
   background: rgba(0, 0, 0, 0.55);
   z-index: 100;
+  user-select: none;
 }
 
 .settings-panel {
@@ -284,7 +292,9 @@ body {
   border-radius: 12px;
   padding: 16px 18px;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  user-select: none;
 }
+.settings-panel * { user-select: none; }
 
 .settings-header {
   display: flex;
