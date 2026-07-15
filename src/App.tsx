@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
 import EditorPane from "./components/EditorPane";
 import HistoryPanel from "./components/HistoryPanel";
 import Toolbar from "./components/Toolbar";
@@ -169,6 +170,25 @@ export default function App() {
   // 清理保存反馈的复位定时器,避免卸载后 setState 泄漏
   useEffect(() => () => {
     if (savedStatusRef.current) clearTimeout(savedStatusRef.current);
+  }, []);
+
+  // 监听 macOS 状态栏菜单发来的事件:tray:new → 新建;tray:settings → 打开设置面板。
+  // handleNew 走 handleNewRef 读取最新实现(避免闭包捕获旧版本);setSettingsOpen 是
+  // useState 的稳定 setter,直接调用即可。listen 返回一个 unlisten 函数,组件卸载/
+  // 依赖更新时清理,避免重复订阅。此 effect 无依赖 → 只订阅一次。
+  useEffect(() => {
+    let unlistenNew: (() => void) | null = null;
+    let unlistenSettings: (() => void) | null = null;
+    (async () => {
+      try {
+        unlistenNew = await listen("tray:new", () => { handleNewRef.current(); });
+        unlistenSettings = await listen("tray:settings", () => { setSettingsOpen(true); });
+      } catch { /* 非 Tauri 环境或事件不可用时静默忽略 */ }
+    })();
+    return () => {
+      if (unlistenNew) unlistenNew();
+      if (unlistenSettings) unlistenSettings();
+    };
   }, []);
 
   // 持久化面板显隐(Cmd+B / 拖到最窄触发的收起都会经此)。首挂载从 DB 读回时也会写一次,
