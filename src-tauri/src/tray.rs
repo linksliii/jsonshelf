@@ -61,8 +61,9 @@ pub fn setup(app: &tauri::App) -> tauri::Result<()> {
 }
 
 /// 安装自定义 macOS 应用主菜单,替换默认菜单里的 Quit 项,把 Cmd+Q 绑定到
-/// 一个我们自己控制的菜单项 `app_quit` —— 处理器直接 `app.exit(0)` 结束进程,
-/// 从而不走 RunEvent::ExitRequested。
+/// 一个我们自己控制的菜单项 `app_quit` —— 处理器调用 `std::process::exit(0)`
+/// 直接结束进程,从而不走 RunEvent::ExitRequested。(不能用 AppHandle::exit,
+/// 它会触发 ExitRequested,进而被 .run() 里的拦截器 hide 掉,窗口关但进程活。)
 ///
 /// 结合 lib.rs 里的 ExitRequested 处理器(拦截 + 隐藏窗口),达到:
 /// - Cmd+Q → app_quit → 真正退出
@@ -98,10 +99,15 @@ pub fn setup_app_menu(app: &tauri::App) -> tauri::Result<()> {
     let menu = Menu::with_items(app, &[&app_submenu])?;
     app.set_menu(menu)?;
 
-    app.on_menu_event(|app_handle, ev| {
+    app.on_menu_event(|_app_handle, ev| {
         if ev.id.as_ref() == "app_quit" {
-            // 直接退出,不经过 ExitRequested;后者被用于拦截 Dock 右键 Quit。
-            app_handle.exit(0);
+            // 直接终止进程,不经过 Tauri 事件循环。
+            // 注意:AppHandle::exit(0) 会先触发 RunEvent::ExitRequested(见 tauri
+            // 2.11.5 src/app.rs 的文档),而 ExitRequested 已被 .run() 闭包拦截为
+            // "prevent + 隐藏窗口"用于处理 Dock 右键 Quit;若这里用 app.exit(0),
+            // Cmd+Q 也会被同一路径拦截而无法真正退出。std::process::exit(0) 直接
+            // 调 libc 退出进程,绕开 ExitRequested,与状态栏"退出"分支保持一致。
+            std::process::exit(0);
         }
     });
 
