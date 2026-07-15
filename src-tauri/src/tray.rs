@@ -70,16 +70,22 @@ pub fn setup(app: &tauri::App) -> tauri::Result<()> {
 /// - Dock 右键 Quit → RunEvent::ExitRequested → 拦截并隐藏
 /// - 状态栏"退出" → std::process::exit(0) → 真正退出
 pub fn setup_app_menu(app: &tauri::App) -> tauri::Result<()> {
+    // 我们自己控制的 Quit 项 —— Cmd+Q 走 std::process::exit(0),绕开 ExitRequested。
+    // 注意:必须放在 App 子菜单最后,并且不使用 PredefinedMenuItem::quit(那个走
+    // NSApp terminate 会触发 ExitRequested,被 .run() 拦截为隐藏,导致 Cmd+Q 失效)。
     let quit_item = MenuItem::with_id(app, "app_quit", "退出 JSONShelf", true, Some("Cmd+Q"))?;
 
-    // 尝试把 macOS 常见的窗口管理项一并塞进去;如果不可用就退化到只留必要的 Quit。
-    // 这些 PredefinedMenuItem 在 tauri 2.11 是稳定 API,失败可能性极低。
+    // ---- App 子菜单("JSONShelf") ----
+    // macOS 会把第一个子菜单的标题自动替换为应用真实名称,这里传 "JSONShelf" 兜底。
     let about = PredefinedMenuItem::about(app, Some("JSONShelf"), None)?;
-    let sep1 = PredefinedMenuItem::separator(app)?;
+    let services = PredefinedMenuItem::services(app, None)?;
     let hide_i = PredefinedMenuItem::hide(app, None)?;
     let hide_others_i = PredefinedMenuItem::hide_others(app, None)?;
     let show_all_i = PredefinedMenuItem::show_all(app, None)?;
-    let sep2 = PredefinedMenuItem::separator(app)?;
+    let app_sep1 = PredefinedMenuItem::separator(app)?;
+    let app_sep2 = PredefinedMenuItem::separator(app)?;
+    let app_sep3 = PredefinedMenuItem::separator(app)?;
+    let app_sep4 = PredefinedMenuItem::separator(app)?;
 
     let app_submenu = Submenu::with_items(
         app,
@@ -87,16 +93,67 @@ pub fn setup_app_menu(app: &tauri::App) -> tauri::Result<()> {
         true,
         &[
             &about,
-            &sep1,
+            &app_sep1,
+            &services,
+            &app_sep2,
             &hide_i,
             &hide_others_i,
             &show_all_i,
-            &sep2,
-            &quit_item,
+            &app_sep3,
+            &quit_item, // Cmd+Q -> app_quit -> std::process::exit(0)
+            &app_sep4,  // 分隔用,防止某些语言环境把 Quit 与后续项合并渲染
         ],
     )?;
 
-    let menu = Menu::with_items(app, &[&app_submenu])?;
+    // ---- Edit 子菜单 ----
+    let undo_i = PredefinedMenuItem::undo(app, None)?;
+    let redo_i = PredefinedMenuItem::redo(app, None)?;
+    let edit_sep = PredefinedMenuItem::separator(app)?;
+    let cut_i = PredefinedMenuItem::cut(app, None)?;
+    let copy_i = PredefinedMenuItem::copy(app, None)?;
+    let paste_i = PredefinedMenuItem::paste(app, None)?;
+    let select_all_i = PredefinedMenuItem::select_all(app, None)?;
+
+    let edit_submenu = Submenu::with_items(
+        app,
+        "Edit",
+        true,
+        &[
+            &undo_i,
+            &redo_i,
+            &edit_sep,
+            &cut_i,
+            &copy_i,
+            &paste_i,
+            &select_all_i,
+        ],
+    )?;
+
+    // ---- Window 子菜单 ----
+    // close_window 会向当前聚焦的窗口派发标准 CloseRequested 事件,
+    // 我们在 window.rs::setup_close_to_hide 里拦截并 hide,从而 Cmd+W = 隐藏窗口。
+    let minimize_i = PredefinedMenuItem::minimize(app, None)?;
+    let zoom_i = PredefinedMenuItem::maximize(app, Some("Zoom"))?; // macOS 语境的 Zoom
+    let win_sep1 = PredefinedMenuItem::separator(app)?;
+    let close_i = PredefinedMenuItem::close_window(app, None)?; // Cmd+W
+    let win_sep2 = PredefinedMenuItem::separator(app)?;
+    let bring_all_i = PredefinedMenuItem::bring_all_to_front(app, None)?;
+
+    let window_submenu = Submenu::with_items(
+        app,
+        "Window",
+        true,
+        &[
+            &minimize_i,
+            &zoom_i,
+            &win_sep1,
+            &close_i,
+            &win_sep2,
+            &bring_all_i,
+        ],
+    )?;
+
+    let menu = Menu::with_items(app, &[&app_submenu, &edit_submenu, &window_submenu])?;
     app.set_menu(menu)?;
 
     app.on_menu_event(|_app_handle, ev| {
