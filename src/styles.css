@@ -93,6 +93,37 @@ body {
   overflow: auto;
 }
 
+/* CodeMirror 深色化 */
+.cm-editor { background: transparent; color: #e6e6e6; }
+.cm-editor.cm-focused { outline: none; }
+.cm-scroller { font-family: ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace; }
+.cm-gutters {
+  background: #1a1a1e;
+  color: #6a6a72;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.cm-activeLineGutter { background: rgba(255,255,255,0.04); color: #cfcfd4; }
+.cm-activeLine { background: rgba(255,255,255,0.02); }
+.cm-selectionBackground, .cm-content ::selection { background: rgba(80,130,220,0.35) !important; }
+.cm-cursor { border-left-color: #e6e6e6; }
+/* lint 徽章仍保留原色 */
+
+/* CodeMirror minimap:右侧紧凑深色缩略图,融入主题 */
+.cm-minimap-gutter {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+.cm-minimap-gutter:hover { opacity: 1; }
+.cm-minimap-inner { width: 80px !important; }
+.cm-minimap-overlay {
+  background: rgba(91, 140, 255, 0.12) !important;
+  border-top: 1px solid rgba(91, 140, 255, 0.35);
+  border-bottom: 1px solid rgba(91, 140, 255, 0.35);
+}
+.cm-minimap-overlay-active { background: rgba(91, 140, 255, 0.2) !important; }
+
 /* 拖拽分隔条:编辑器与历史面板之间的细竖条,可左右拖拽调节面板宽度。 */
 .panel-divider {
   flex: none;

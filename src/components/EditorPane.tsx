@@ -9,6 +9,7 @@ import { bracketMatching } from "@codemirror/language";
 import {
   autocompletion, closeBrackets, closeBracketsKeymap,
 } from "@codemirror/autocomplete";
+import { showMinimap } from "@replit/codemirror-minimap";
 import { hotkeyFromEvent, hotkeysEqual, parseHotkey, type Hotkey } from "../lib/hotkeys";
 import { jsonCompletionSource } from "../lib/jsonCompletion";
 
@@ -98,6 +99,15 @@ export default function EditorPane({
         lineNumbers(),
         highlightActiveLine(),
         history(),
+        // VS Code 风格的代码缩略图,渲染在右侧 gutter
+        showMinimap.compute([], () => ({
+          create: () => {
+            const dom = document.createElement("div");
+            return { dom };
+          },
+          displayText: "characters",
+          showOverlay: "always",
+        })),
         // 语言相关扩展(json 时含语法/校验/补全;plaintext 时为空)。
         languageCompartment.current.of(buildLanguageExtensions(language)),
         // 基础编辑辅助:自动闭合括号/引号、括号匹配高亮。对所有语言生效。

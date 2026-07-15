@@ -24,6 +24,7 @@
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.6",
     "@leeoniya/ufuzzy": "^1.0.19",
+    "@replit/codemirror-minimap": "^0.5.2",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.5.1",

@@ -35,6 +35,9 @@ importers:
       '@leeoniya/ufuzzy':
         specifier: ^1.0.19
         version: 1.0.19
+      '@replit/codemirror-minimap':
+        specifier: ^0.5.2
+        version: 0.5.2(@codemirror/language@6.12.4)(@codemirror/lint@6.9.7)(@codemirror/state@6.7.1)(@codemirror/view@6.43.6)(@lezer/common@1.5.2)(@lezer/highlight@1.2.3)
       '@tauri-apps/api':
         specifier: ^2.11.1
         version: 2.11.1
@@ -234,6 +237,16 @@ packages:
 
   '@oxc-project/types@0.139.0':
     resolution: {integrity: sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@oxc-project/types/-/types-0.139.0.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40oxc-project%2Ftypes%2F-%2Ftypes-0.139.0.tgz}
+
+  '@replit/codemirror-minimap@0.5.2':
+    resolution: {integrity: sha512-eNAtpr0hOG09/5zqAQ5PkgZEb3V/MHi30zentCxiR73r+utR2m9yVMCpBmfsWbb8mWxUWhMGPiHxM5hFtnscQA==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@replit/codemirror-minimap/-/codemirror-minimap-0.5.2.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40replit%2Fcodemirror-minimap%2F-%2Fcodemirror-minimap-0.5.2.tgz}
+    peerDependencies:
+      '@codemirror/language': ^6.9.1
+      '@codemirror/lint': ^6.4.2
+      '@codemirror/state': ^6.3.1
+      '@codemirror/view': ^6.21.3
+      '@lezer/common': ^1.1.0
+      '@lezer/highlight': ^1.1.6
 
   '@rolldown/binding-android-arm64@1.1.5':
     resolution: {integrity: sha512-lZg8fqIv2v7FF237bwMgzGZEJvGL79/s5knJ/i6FmsGF4XXlzccZ4jb+TrFIxtSSxFtIpdsgrPZeMk1I9AFcyQ==, tarball: http://artifactory.intra.xiaojukeji.com/artifactory/api/npm/npm/@rolldown/binding-android-arm64/-/binding-android-arm64-1.1.5.tgz?dl=https%3A%2F%2Fregistry.npmmirror.com%2F%40rolldown%2Fbinding-android-arm64%2F-%2Fbinding-android-arm64-1.1.5.tgz}
@@ -1183,6 +1196,16 @@ snapshots:
     optional: true
 
   '@oxc-project/types@0.139.0': {}
+
+  '@replit/codemirror-minimap@0.5.2(@codemirror/language@6.12.4)(@codemirror/lint@6.9.7)(@codemirror/state@6.7.1)(@codemirror/view@6.43.6)(@lezer/common@1.5.2)(@lezer/highlight@1.2.3)':
+    dependencies:
+      '@codemirror/language': 6.12.4
+      '@codemirror/lint': 6.9.7
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.6
+      '@lezer/common': 1.5.2
+      '@lezer/highlight': 1.2.3
+      crelt: 1.0.7
 
   '@rolldown/binding-android-arm64@1.1.5':
     optional: true
