@@ -1,6 +1,50 @@
 import { useEffect, useRef } from "react";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from "@codemirror/view";
+// 深色主题:通过 EditorView.theme 注册,作为编辑器 state 的一部分,
+// 天然赢过任何外部全局 CSS 的加载顺序/特异性(不再需要 !important)。
+const darkTheme = EditorView.theme({
+  "&": { backgroundColor: "transparent", color: "#e6e6e6" },
+  ".cm-scroller": {
+    fontFamily:
+      'ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace',
+  },
+  ".cm-gutters": {
+    backgroundColor: "#1a1a1e",
+    color: "#6a6a72",
+    borderRight: "1px solid rgba(255,255,255,0.06)",
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    color: "#cfcfd4",
+  },
+  ".cm-activeLine": { backgroundColor: "rgba(255,255,255,0.02)" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#e6e6e6" },
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, & .cm-selectionBackground, .cm-content ::selection":
+    { backgroundColor: "rgba(80,130,220,0.35) !important" },
+  "&.cm-focused": { outline: "none" },
+  // 明确把编辑内容区光标设为文本光标,防止 minimap 的 grab/drag 光标外泄。
+  ".cm-content, .cm-scroller": { cursor: "text" },
+  // Minimap 主题微调:内部 canvas 走深色浅描边;overlay(视口指示器)配深色高亮。
+  // 这里不再设 100% 宽度到编辑区级别,只调美观样式,原插件自身把 overlay 定位到
+  // .cm-minimap-inner 内(position:absolute; right:0),不会覆盖到编辑正文区。
+  ".cm-minimap-gutter": {
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderLeft: "1px solid rgba(255,255,255,0.06)",
+    opacity: "0.75",
+    transition: "opacity 0.15s ease",
+    cursor: "pointer",
+  },
+  ".cm-minimap-gutter:hover": { opacity: "1" },
+  ".cm-minimap-overlay": {
+    backgroundColor: "rgba(91,140,255,0.35)",
+    cursor: "grab",
+  },
+  ".cm-minimap-overlay-active .cm-minimap-overlay": {
+    backgroundColor: "rgba(91,140,255,0.5)",
+    cursor: "grabbing",
+  },
+}, { dark: true });
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { searchKeymap, searchPanelOpen } from "@codemirror/search";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
@@ -96,17 +140,21 @@ export default function EditorPane({
     const state = EditorState.create({
       doc: value,
       extensions: [
+        darkTheme,
         lineNumbers(),
         highlightActiveLine(),
         history(),
-        // VS Code 风格的代码缩略图,渲染在右侧 gutter
+        // VS Code 风格的代码缩略图,渲染在右侧 gutter。
+        // showOverlay:"mouse-over" 仅在鼠标悬停 minimap 时显示视口指示器,
+        // 避免 "always" 常态显示的高亮矩形被误认为整块编辑区选中。
+        // displayText:"blocks" 使用色块渲染,视觉上更贴近 VS Code 且不易被误读。
         showMinimap.compute([], () => ({
           create: () => {
             const dom = document.createElement("div");
             return { dom };
           },
-          displayText: "characters",
-          showOverlay: "always",
+          displayText: "blocks",
+          showOverlay: "mouse-over",
         })),
         // 语言相关扩展(json 时含语法/校验/补全;plaintext 时为空)。
         languageCompartment.current.of(buildLanguageExtensions(language)),
