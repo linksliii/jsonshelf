@@ -6,6 +6,13 @@ export function safeFileName(title: string): string {
 }
 
 export function autoTitle(content: string): string {
+  // 大文件只扫开头找第一个 key,避免为了标题把整篇 10MB JSON parse 成对象。
+  if (content.length > 200_000) {
+    const head = content.slice(0, 4096);
+    const m = /^\s*\{\s*"((?:[^"\\]|\\.){1,120})"/.exec(head);
+    if (m) return m[1].slice(0, 40);
+    return contentPreview(head);
+  }
   try {
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed)) return `array[${parsed.length}]`;

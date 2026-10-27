@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import type { HistoryEntry } from "../types";
 import { formatAbsTime } from "../lib/formatAbsTime";
+import { formatBytes } from "../lib/jsonStats";
+import Icon from "./Icons";
 
 interface Props {
   entry: HistoryEntry;
   selected: boolean;
-  // 右键菜单坐标(该行菜单打开时非 null);状态由 HistoryPanel 单一管理,保证同时只有一个菜单。
   menuPos: { x: number; y: number } | null;
   onOpenMenu: (id: number, pos: { x: number; y: number }) => void;
   onCloseMenu: () => void;
@@ -24,7 +25,6 @@ export default function HistoryItem({
   const [draft, setDraft] = useState(entry.title);
   const menu = menuPos;
 
-  // 菜单打开时,点击别处或 Esc 关闭。Esc 需 stopPropagation,避免连带触发 App 的隐藏窗口。
   useEffect(() => {
     if (!menu) return;
     const close = () => onCloseMenu();
@@ -44,46 +44,85 @@ export default function HistoryItem({
   return (
     <div
       className={`history-item${selected ? " selected" : ""}`}
-      onClick={() => onSelect(entry)}
+      onClick={() => !editing && onSelect(entry)}
+      onKeyDown={(e) => {
+        if (editing) return;
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(entry); }
+      }}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onOpenMenu(entry.id, { x: e.clientX, y: e.clientY }); }}
+      role="button"
+      tabIndex={0}
     >
-      {editing ? (
-        <input
-          aria-label="重命名"
-          value={draft}
-          autoFocus
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => { setEditing(false); if (draft.trim()) onRename(entry.id, draft.trim()); }}
-          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-        />
-      ) : (
-        <span className="title" onDoubleClick={(e) => { e.stopPropagation(); startRename(); }}>
-          <span className="title-row">
-            {entry.pinned ? <span className="pin-indicator" aria-hidden="true">📌 </span> : null}
-            <span className="title-text">{entry.title}</span>
+      <span className="history-item-main">
+        {editing ? (
+          <input
+            aria-label="重命名"
+            value={draft}
+            autoFocus
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => { setEditing(false); if (draft.trim()) onRename(entry.id, draft.trim()); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              if (e.key === "Escape") { e.stopPropagation(); setEditing(false); }
+            }}
+          />
+        ) : (
+          <span className="title" onDoubleClick={(e) => { e.stopPropagation(); startRename(); }}>
+            <span className="title-row">
+              {entry.pinned ? <Icon name="pin" size={11} className="pin-indicator" /> : null}
+              <span className="title-text">{entry.title}</span>
+            </span>
+            <span className="history-meta">
+              <span>{formatAbsTime(entry.updatedAt)}</span>
+              {typeof entry.size === "number" && entry.size > 0 ? (
+                <>
+                  <span className="meta-dot" />
+                  <span>{formatBytes(entry.size)}</span>
+                </>
+              ) : null}
+            </span>
           </span>
-          <span className="history-time">创建 {formatAbsTime(entry.createdAt)} · 保存 {formatAbsTime(entry.updatedAt)}</span>
-        </span>
-      )}
-      <button aria-label="固定" onClick={(e) => { e.stopPropagation(); onTogglePin(entry.id, !entry.pinned); }}>
-        {entry.pinned ? "取消固定" : "固定"}
-      </button>
-      <button aria-label="删除" onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}>删除</button>
+        )}
+      </span>
+
+      <span className="history-item-actions">
+        <button
+          aria-label="固定"
+          title={entry.pinned ? "取消固定" : "固定"}
+          onClick={(e) => { e.stopPropagation(); onTogglePin(entry.id, !entry.pinned); }}
+        >
+          <Icon name="pin" size={13} />
+        </button>
+        <button
+          aria-label="删除"
+          title="删除"
+          onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
+        >
+          <Icon name="trash" size={13} />
+        </button>
+      </span>
 
       {menu ? (
         <div
-          className="history-context-menu"
+          className="context-menu"
           role="menu"
           style={{ left: menu.x, top: menu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button role="menuitem" onClick={() => { onCloseMenu(); startRename(); }}>重命名</button>
-          <button role="menuitem" onClick={() => { onCloseMenu(); onCopyContent(entry); }}>复制内容</button>
-          <button role="menuitem" onClick={() => { onCloseMenu(); onTogglePin(entry.id, !entry.pinned); }}>
-            {entry.pinned ? "取消固定" : "固定"}
+          <button role="menuitem" onClick={() => { onCloseMenu(); startRename(); }}>
+            <Icon name="file" size={13} /> 重命名
           </button>
-          <button role="menuitem" onClick={() => { onCloseMenu(); onDelete(entry.id); }}>删除</button>
+          <button role="menuitem" onClick={() => { onCloseMenu(); onCopyContent(entry); }}>
+            <Icon name="copy" size={13} /> 复制内容
+          </button>
+          <button role="menuitem" onClick={() => { onCloseMenu(); onTogglePin(entry.id, !entry.pinned); }}>
+            <Icon name="pin" size={13} /> {entry.pinned ? "取消固定" : "固定"}
+          </button>
+          <span className="context-sep" />
+          <button role="menuitem" className="danger" onClick={() => { onCloseMenu(); onDelete(entry.id); }}>
+            <Icon name="trash" size={13} /> 删除
+          </button>
         </div>
       ) : null}
     </div>

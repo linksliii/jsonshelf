@@ -1,90 +1,139 @@
-# JSONShelf
+<p align="center">
+  <img src="assets/logo.png" width="120" alt="JSONShelf" />
+</p>
 
-macOS 上的轻量 JSON 面板。全局快捷键呼出 Spotlight 式浮层,粘贴/编辑 JSON,一键格式化,历史条目可模糊搜索、命名、固定、回查,支持导出到本地文件。
+<h1 align="center">JSONShelf</h1>
 
-基于 Tauri + React + CodeMirror 6 + SQLite,注重低内存占用。
+<p align="center">
+  原生 macOS JSON 工作台<br/>
+  <sub>Spotlight 式呼出 · 液态玻璃 · 大文件不卡</sub>
+</p>
+
+<p align="center">
+  <img alt="macOS 26+ Liquid Glass" src="https://img.shields.io/badge/macOS-26%2B%20Liquid%20Glass-black?logo=apple&logoColor=white" />
+  <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white" />
+  <img alt="Bundle" src="https://img.shields.io/badge/bundle-3.9%20MB-blue" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-94%20passed-2ea44f" />
+</p>
+
+<p align="center">
+  <img src="assets/screenshot.jpg" width="900" alt="JSONShelf 主界面" />
+</p>
+
+---
+
+## 为什么是 JSONShelf
+
+查一段接口返回、改一条埋点配置、找回上周那份 JSON，这些事不该从"打开一个 IDE"开始。
+
+JSONShelf 把它们收进一个全局快捷键：面板从屏幕边缘出来，粘贴、格式化、改完 `⌘S` 导出。历史自动留底，下次打开还在。所有内容只写本机一个 SQLite 文件，没有账号，也没有云同步。
 
 ## 功能
 
-- **全局快捷键呼出**:`⌥⌘J` 呼出/隐藏居中浮层;失焦或 `Esc` 自动隐藏(状态保留,不销毁)。
-- **格式化**:`⇧⌥F` 格式化(对齐 VSCode);JSON 走浏览器原生,YAML/HTML/CSS/JS 按需动态加载 Prettier。
-- **压缩**:一键 minify。
-- **历史记录**:编辑内容防抖自动存入 SQLite(可用"保存到历史"开关关闭);列表支持模糊搜索(LIKE 粗筛 + 前端 fuzzy 精排)、双击重命名、固定置顶、删除。
-- **导出**:`⌘S` 通过系统对话框保存为 `.json` 文件到任意目录。
+**呼出**
+无论当前在哪个 App，按一下快捷键就能把面板叫到前面。窗口被隐藏、最小化，或者上一次被拖到屏幕外，唤出时会重新拉回可见区域。快捷键被别的软件占用时，设置页会直接标出来，不会静默失效。
 
-## 默认快捷键
+**编辑**
+CodeMirror 6 打底，JSON 语法高亮、代码折叠、实时校验。往空编辑器里粘贴会停在第一行，不会跳到最后。格式化、压缩、复制、导出都在顶部一排。查找、自动换行、minimap 各有自己的开关。
 
-| 快捷键 | 作用 |
-|--------|------|
-| `⌥⌘J` | 全局呼出 / 隐藏面板 |
-| `⇧⌥F` | 格式化 |
-| `⌘S` | 导出到文件 |
-| `⌘F` | 编辑器内查找 |
-| `Esc` | 隐藏面板 |
+**历史**
+编辑停顿后自动存进 SQLite。侧栏只取标题、时间和 240 字预览，正文按需加载，所以历史里堆着几十个大文件也不会拖慢滚动。支持搜索、重命名、固定、删除。每次启动会把数据库另存一份 `.bak`，误写后还能回滚一轮。
 
-> 全局呼出键若与其他软件冲突,应用会在启动时打印警告并继续运行(不影响窗口内使用)。
+**大文件**
+超过 400 KB 自动关掉实时校验、自动换行和补全；超过 1 MB 时 React 只保留 4 KB 文件头和行数，正文交给 CodeMirror。实测 9.4 MB、50 万行的 JSON 仍可粘贴、编辑、入库。
 
-## 开发
+**外观**
+macOS 26 及以上直接用系统的 `NSGlassEffectView` 做液态玻璃，旧系统回落到 `NSVisualEffectView`，也可以切成纯色。标题栏头像、菜单栏图标和应用图标都来自同一张原图。
 
-前置:Node ≥ 18、pnpm、Rust 工具链、Tauri CLI 2.x。
+**导出**
+`⌘S` 走系统保存面板，文件名默认取 JSON 里的标题字段，不用自己敲。
+
+## 安装
+
+目前从源码构建。
+
+需要 Node 18+、pnpm、Rust 工具链，以及 Tauri CLI 2.x。
 
 ```bash
+cd json-tools
 pnpm install
-cargo tauri dev      # 启动开发模式(自动跑 pnpm dev)
+cargo tauri build --bundles app
+open src-tauri/target/release/bundle/macos/JSONShelf.app
 ```
 
-国内网络建议为 rustup / cargo 配置镜像(见下文"镜像配置")。
+macOS 26 及以上才能看到液态玻璃，旧系统会自动使用毛玻璃。自行分发时需要自己的签名和公证。
 
-### 测试
+## 快捷键
 
-```bash
-pnpm test            # 前端单元测试(formatter / fuzzy / title / HistoryPanel)
-cargo check          # 后端编译检查(在 src-tauri/ 下)
-```
+| 动作 | 快捷键 | 动作 | 快捷键 |
+|---|---|---|---|
+| 呼出 / 收起 | `⌥⌘J` | 格式化 | `⇧⌥F` |
+| 导出 | `⌘S` | 新建 | `⌘T` |
+| 历史面板 | `⌘B` | 设置 | `⌘,` |
+| 查找 | `⌘F` | 隐藏面板 | `esc` |
 
-## 打包
+快捷键都可以在设置里重录；注册失败会显示原因。
 
-```bash
-cargo tauri build    # 生成 src-tauri/target/release/bundle/macos/JSONShelf.app 与 .dmg
-```
+## 性能
 
-产物:
-- `.app`(`bundle/macos/JSONShelf.app`,约 15MB)——核心可运行产物,可直接双击运行或拖入"应用程序"。
-- `.dmg`(`bundle/dmg/`)——磁盘镜像。
+| 项目 | 数值 |
+|---|---|
+| `.app` 体积 | 3.9 MB |
+| 可执行文件 | 3.6 MB |
+| 前端资源 | 672 KB |
+| 主进程物理内存 | ~39 MB |
+| 9.4 MB / 50 万行 JSON | 可粘贴、编辑、入库 |
 
-> **注意**:`.dmg` 的最后一步用 AppleScript 通过 Finder 设置镜像窗口外观,需在**正常桌面会话**中运行 `cargo tauri build`(非 SSH/后台/无 GUI 环境),否则 `bundle_dmg.sh` 会失败——此时 `.app` 仍已成功生成,不受影响。
+包体来自 Rust release 配置（`opt-level="z"`、LTO、`codegen-units=1`、`strip`、`panic="abort"`），前端只保留 JSON 需要的依赖，图标量化到 256 色。内存侧的关键是列表只查元数据、正文按需取；大文件在 React 里只留文件头，不再复制一份全文。
 
-## 镜像配置(国内网络)
-
-```bash
-# rustup / toolchain
-export RUSTUP_DIST_SERVER="https://mirrors.ustc.edu.cn/rust-static"
-export RUSTUP_UPDATE_ROOT="https://mirrors.ustc.edu.cn/rust-static/rustup"
-```
-
-cargo 依赖镜像(`~/.cargo/config.toml`):
-
-```toml
-[source.crates-io]
-replace-with = 'ustc'
-
-[source.ustc]
-registry = "sparse+https://mirrors.ustc.edu.cn/crates.io-index/"
-```
+WebKit 的 WebContent / GPU 进程要另外算。9.4 MB 文件保存的瞬间会冲高，落盘后回落。
 
 ## 架构
 
 ```
-Tauri 主进程 (Rust)                     WebView 前端 (React + Vite)
-├─ 全局快捷键 (shortcut.rs)             ├─ EditorPane   CodeMirror 6 + JSON lint
-├─ 窗口浮层控制 (window.rs)             ├─ Toolbar      语言/格式化/压缩/保存/历史开关
-├─ SQLite 历史 (tauri-plugin-sql)       ├─ HistoryPanel 搜索 + 重命名/固定/删除
-└─ 文件导出 (commands/export.rs)        └─ lib/         formatter · fuzzy · title · ipc
+src-tauri/src/
+├── shortcut.rs   全局快捷键注册、重绑、状态
+├── window.rs     唤出 / 激活 / 越界修复
+├── glass.rs      NSGlassEffectView 与毛玻璃回落
+├── tray.rs       菜单栏图标与菜单
+└── lib.rs        迁移、导出、设置命令
+src/
+├── components/   TitleBar / Toolbar / EditorPane / HistoryPanel / SettingsPanel
+└── lib/          ipc / history / formatter / hotkeys
 ```
 
-- 编辑器内容为唯一真相,后台(DB / 导出)错误只提示不打断编辑。
-- 历史持久化由"历史开关 + 防抖 upsert"驱动;格式化纯前端,不落库。
+- **存储**：`tauri-plugin-sql` + SQLite，WAL 模式。列表查询只读 id、标题、时间和预览；正文懒加载。写入前校验"正文归属条目"，避免切换条目时写串；启动时备份数据库。
+- **编辑器**：CodeMirror 6，行数直接取 `doc.lines`，不再 `split` 全文；粘贴到空文档时把选区锚回开头。
+- **窗口**：唤出前检查 `NSApp.isActive()` 和 keyWindow，必要时 `orderFrontRegardless` 加 `activate`；窗口不完全落在任一显示器工作区时重新居中。
+- **玻璃**：运行时插入 `NSGlassEffectView`（macOS 26+），失败回落 `NSVisualEffectView`；CSS 只负责内容和高光。
+- **图标**：一张原图同时生成应用图标、菜单栏模板图和 App 内头像；菜单栏用 36px 模板，跟随明暗自动反色。
+
+## 开发
+
+```bash
+pnpm install
+pnpm test        # 94 个用例
+cargo tauri dev  # 开发模式
+```
+
+重新生成图标（需要 Pillow 和 numpy）：
+
+```bash
+python3 scripts/generate-icons.py
+```
+
+## 隐私
+
+所有历史只存在 `~/Library/Application Support/com.jsonshelf.app/jsonshelf.db`，启动时另存一份 `.bak`。没有网络请求，没有遥测，也没有账号。
+
+## 已知限制
+
+- 只处理 JSON。多语言格式化和 Prettier 已经移除，换来更小的包体和更少的运行时依赖。
+- 超过 400 KB 不做实时校验、自动换行和补全，状态栏会显示"未校验"。
+- 超大文件保存的瞬时内存由 WebKit 决定，9.4 MB 时峰值会到几百 MB，落盘后回落。
+- 菜单栏图标可能被 Bartender、Hidden Bar 之类的工具折进二级菜单。
+- 全局快捷键被占用时不会静默失败，但需要你在设置里换一个组合。
 
 ## 许可
 
-私有项目。
+私有项目，未授权。

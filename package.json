@@ -1,6 +1,6 @@
 {
   "name": "json-tools",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "",
   "main": "index.js",
   "type": "module",
@@ -26,11 +26,7 @@
     "@leeoniya/ufuzzy": "^1.0.19",
     "@replit/codemirror-minimap": "^0.5.2",
     "@tauri-apps/api": "^2.11.1",
-    "@tauri-apps/plugin-dialog": "^2.7.1",
-    "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-sql": "^2.4.0",
-    "codemirror": "^6.0.2",
-    "prettier": "^3.9.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

@@ -1,8 +1,6 @@
-import { formatBytes, type JSONStats } from "../lib/jsonStats";
+import Icon, { type IconName } from "./Icons";
 
 interface Props {
-  language: string;
-  onLanguageChange: (lang: string) => void;
   onFormat: () => void;
   onMinify: () => void;
   onSave: () => void;
@@ -10,44 +8,58 @@ interface Props {
   onNew: () => void;
   saveToHistory: boolean;
   onToggleSaveToHistory: (v: boolean) => void;
-  status: { kind: "ok" | "error" | "idle"; message: string };
-  stats: JSONStats;
-  valid: boolean | null;  // null = 空内容或非 JSON,不显示校验指示
-  onOpenSettings: () => void;
+  formatHint: string;
+  saveHint: string;
+  newHint: string;
+  empty: boolean;
 }
 
-const LANGUAGES = ["json", "yaml", "html", "css", "javascript", "plaintext"];
+interface ActionProps {
+  icon: IconName;
+  label: string;
+  hint?: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
 
-function statsText(stats: JSONStats): string {
-  const parts = [`${formatBytes(stats.bytes)}`, `${stats.lines} 行`];
-  if (stats.keys !== null) parts.push(`${stats.keys} 键`);
-  return parts.join(" · ");
+function Action({ icon, label, hint, onClick, disabled }: ActionProps) {
+  return (
+    <button
+      className="action"
+      onClick={onClick}
+      disabled={disabled}
+      title={hint ? `${label} · ${hint}` : label}
+    >
+      <Icon name={icon} size={15} />
+      <span>{label}</span>
+    </button>
+  );
 }
 
 export default function Toolbar(props: Props) {
   return (
-    <div className="toolbar">
-      <select value={props.language} onChange={(e) => props.onLanguageChange(e.target.value)}>
-        {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
-      </select>
-      <button onClick={props.onNew}>新建</button>
-      <button onClick={props.onFormat}>格式化 (⇧⌥F)</button>
-      <button onClick={props.onMinify}>压缩</button>
-      <button onClick={props.onCopy}>复制</button>
-      <button onClick={props.onSave}>保存到文件 (⌘S)</button>
-      <label>
-        <input type="checkbox" checked={props.saveToHistory}
-          onChange={(e) => props.onToggleSaveToHistory(e.target.checked)} />
-        保存到历史
-      </label>
-      <span className={`status status-${props.status.kind}`}>{props.status.message}</span>
-      {props.valid !== null && (
-        <span className={`json-validity json-validity-${props.valid ? "ok" : "error"}`}>
-          {props.valid ? "✓ 有效" : "✗ 无效"}
-        </span>
-      )}
-      <span className="json-stats">{statsText(props.stats)}</span>
-      <button className="toolbar-settings" onClick={props.onOpenSettings} aria-label="设置" title="设置">⚙</button>
+    <div className="actionbar">
+      <div className="action-group">
+        <Action icon="plus" label="新建" hint={props.newHint} onClick={props.onNew} />
+        <Action icon="sparkle" label="格式化" hint={props.formatHint}
+          onClick={props.onFormat} disabled={props.empty} />
+        <Action icon="collapse" label="压缩" onClick={props.onMinify} disabled={props.empty} />
+        <Action icon="copy" label="复制" onClick={props.onCopy} disabled={props.empty} />
+        <Action icon="download" label="导出" hint={props.saveHint}
+          onClick={props.onSave} disabled={props.empty} />
+      </div>
+
+      <div className="actionbar-right">
+        <label className="switch" title="自动把编辑内容存进历史">
+          <input
+            type="checkbox"
+            checked={props.saveToHistory}
+            onChange={(e) => props.onToggleSaveToHistory(e.target.checked)}
+          />
+          <span className="switch-track" aria-hidden="true"><span className="switch-thumb" /></span>
+          <span className="switch-label">存入历史</span>
+        </label>
+      </div>
     </div>
   );
 }

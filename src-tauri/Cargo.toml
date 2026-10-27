@@ -1,14 +1,12 @@
 [package]
 name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.2.0"
+description = "JSONShelf"
+authors = ["JSONShelf"]
 license = ""
 repository = ""
 edition = "2021"
 rust-version = "1.77.2"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 name = "app_lib"
@@ -18,13 +16,22 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
-serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-log = "0.4"
-tauri = { version = "2.11.3", features = ["tray-icon"] }
-tauri-plugin-log = "2"
+tauri = { version = "2.11.3", features = ["tray-icon", "macos-private-api"] }
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-dialog = "2"
-tauri-plugin-fs = "2"
 tauri-plugin-window-state = "2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSWindow", "NSView", "NSScreen"] }
+
+# 体积优先:体积最小的 release 构建。
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+incremental = false

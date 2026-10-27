@@ -5,7 +5,15 @@ import type { HistoryEntry } from "../types";
 let dbPromise: Promise<Database> | null = null;
 function db(): Promise<Database> {
   if (!dbPromise) {
-    dbPromise = Database.load("sqlite:jsonshelf.db").catch((e) => {
+    dbPromise = (async () => {
+      const d = await Database.load("sqlite:jsonshelf.db");
+      // 大文件写入性能:WAL + NORMAL,避免每次 UPDATE 都等 fsync。
+      // PRAGMA 失败不影响功能(不同 sqlite 版本行为略有差异)。
+      try { await d.select("PRAGMA journal_mode=WAL"); } catch { /* ignore */ }
+      try { await d.execute("PRAGMA synchronous=NORMAL"); } catch { /* ignore */ }
+      try { await d.execute("PRAGMA temp_store=MEMORY"); } catch { /* ignore */ }
+      return d;
+    })().catch((e) => {
       dbPromise = null; // 失败时清空,下次调用重试,避免毒化单例
       throw e;
     });
@@ -16,40 +24,60 @@ function db(): Promise<Database> {
 interface Row {
   id: number;
   title: string;
-  content: string;
+  content?: string;
+  preview?: string;
   language: string;
   pinned: number;
   created_at: number;
   updated_at: number;
+  size?: number;
 }
+
+// 列表只取元数据 + 240 字符预览,不搬运正文 —— 大文件历史很多时这是主要收益。
+const LIST_COLUMNS =
+  "id, title, language, pinned, created_at, updated_at, " +
+  "LENGTH(content) AS size, substr(content, 1, 240) AS preview";
 
 const toEntry = (r: Row): HistoryEntry => ({
   id: r.id,
   title: r.title,
   content: r.content,
+  preview: r.preview,
   language: r.language,
   pinned: r.pinned === 1,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  size: r.size,
 });
 
 export async function listHistory(): Promise<HistoryEntry[]> {
   const d = await db();
   const rows = await d.select<Row[]>(
-    "SELECT * FROM history ORDER BY pinned DESC, updated_at DESC"
+    `SELECT ${LIST_COLUMNS} FROM history ORDER BY pinned DESC, updated_at DESC`
   );
   return rows.map(toEntry);
 }
 
-// LIKE 粗筛(不区分大小写);精排在前端 fuzzy 做
+// LIKE 粗筛(不区分大小写);精排在前端 fuzzy 做。
+// 只返回预览,不返回正文。
 export async function searchHistory(keyword: string): Promise<HistoryEntry[]> {
   const d = await db();
   const kw = `%${keyword}%`;
   const rows = await d.select<Row[]>(
-    "SELECT * FROM history WHERE title LIKE ?1 OR content LIKE ?1 ORDER BY pinned DESC, updated_at DESC",
+    `SELECT ${LIST_COLUMNS} FROM history WHERE title LIKE ?1 OR content LIKE ?1 ORDER BY pinned DESC, updated_at DESC`,
     [kw]
   );
   return rows.map(toEntry);
+}
+
+// 按需读取单条正文(选中历史时调用)。
+export async function getHistoryContent(id: number): Promise<string> {
+  const d = await db();
+  const rows = await d.select<{ content: string }[]>(
+    "SELECT content FROM history WHERE id = ?",
+    [id]
+  );
+  return rows.length ? rows[0].content : "";
 }
 
 export async function upsertHistory(entry: {
@@ -121,4 +149,17 @@ export async function setHideOnBlur(enabled: boolean): Promise<void> {
 
 export async function rebindToggleShortcut(accelerator: string): Promise<void> {
   await invoke("rebind_toggle_shortcut", { accelerator });
+}
+
+export interface ShortcutStatus {
+  accelerator: string;
+  registered: boolean;
+}
+
+export async function getShortcutStatus(): Promise<ShortcutStatus | null> {
+  return invoke<ShortcutStatus | null>("shortcut_status");
+}
+
+export async function getGlassKind(): Promise<"liquid" | "vibrancy" | "none"> {
+  return invoke<"liquid" | "vibrancy" | "none">("glass_kind");
 }
